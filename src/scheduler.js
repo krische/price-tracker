@@ -1,7 +1,7 @@
 const cron = require('node-cron')
 const { getDb } = require('./db')
 const { scrapeProduct } = require('./scraper')
-const { sendPriceDropAlert } = require('./mailer')
+const { sendPriceDropAlert, sendInStockAlert } = require('./mailer')
 
 const THRESHOLD = parseFloat(process.env.PRICE_DROP_THRESHOLD || '5')
 
@@ -10,7 +10,7 @@ const THRESHOLD = parseFloat(process.env.PRICE_DROP_THRESHOLD || '5')
  */
 async function checkAllPrices() {
   const db = getDb()
-  const products = db.prepare('SELECT * FROM products').all()
+  const products = db.prepare('SELECT id, url, last_price, in_stock FROM products').all()
 
   console.log(`[Scheduler] Checking ${products.length} product(s)...`)
 
@@ -19,30 +19,50 @@ async function checkAllPrices() {
       console.log(`[Scheduler] Scraping: ${product.url}`)
       const result = await scrapeProduct(product.url)
 
-      if (!result.price) {
-        console.log(`[Scheduler] Could not get price for ${product.url}`)
-        continue
-      }
-
       const newPrice = result.price
       const oldPrice = product.last_price
 
-      // Update last checked and price
+      // Update availability even when the current price cannot be read.
       db.prepare(`
         UPDATE products 
-        SET last_price = ?, last_checked = CURRENT_TIMESTAMP, name = ?,
-            lowest_price = CASE WHEN ? < lowest_price OR lowest_price IS NULL THEN ? ELSE lowest_price END
+        SET last_price = COALESCE(?, last_price), last_checked = CURRENT_TIMESTAMP, name = ?,
+            in_stock = ?,
+            last_screenshot = ?,
+            lowest_price = CASE
+              WHEN ? IS NOT NULL AND (? < lowest_price OR lowest_price IS NULL) THEN ?
+              ELSE lowest_price
+            END
         WHERE id = ?
-      `).run(newPrice, result.name, newPrice, newPrice, product.id)
-
-      // Record price history
-      db.prepare('INSERT INTO price_history (product_id, price) VALUES (?, ?)').run(
-        product.id,
-        newPrice
+      `).run(
+        newPrice,
+        result.name,
+        result.inStock ? 1 : 0,
+        result.screenshot.toString('base64'),
+        newPrice,
+        newPrice,
+        newPrice,
+        product.id
       )
 
+      // Keep availability checks in history even when no price was available.
+      db.prepare('INSERT INTO price_history (product_id, price, in_stock) VALUES (?, ?, ?)').run(
+        product.id,
+        newPrice,
+        result.inStock ? 1 : 0
+      )
+
+      // Alert only on an out-of-stock to in-stock transition.
+      if (Number(product.in_stock) === 0 && result.inStock) {
+        console.log(`[Scheduler] Back in stock: ${result.name}`)
+        await sendInStockAlert({
+          productName: result.name,
+          url: product.url,
+          store: result.store,
+        })
+      }
+
       // Check for price drop alert
-      if (oldPrice && newPrice < oldPrice) {
+      if (oldPrice && newPrice && newPrice < oldPrice) {
         const percentDrop = ((oldPrice - newPrice) / oldPrice) * 100
 
         if (percentDrop >= THRESHOLD) {
