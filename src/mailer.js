@@ -79,4 +79,51 @@ async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store,
   }
 }
 
-module.exports = { sendPriceDropAlert }
+/**
+ * Send an alert when a product becomes available again
+ */
+async function sendInStockAlert({ productName, url, store }) {
+  const to = process.env.ALERT_EMAIL
+  if (!to || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.log('[Mailer] Email not configured — skipping alert')
+    return false
+  }
+
+  const subject = `🔔 Back in Stock: ${productName}`
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #2563eb;">📦 Back in Stock!</h2>
+
+      <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <h3 style="margin: 0 0 8px 0; color: #166534;">${productName}</h3>
+        <p style="margin: 4px 0; color: #15803d; font-size: 14px;">Store: ${store}</p>
+      </div>
+
+      <p style="color: #4b5563;">This product is now available to purchase.</p>
+
+      <a href="${url}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+        View Product →
+      </a>
+
+      <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">
+        Sent by Price Tracker • <a href="http://localhost:3000" style="color: #9ca3af;">Manage alerts</a>
+      </p>
+    </div>
+  `
+
+  try {
+    await getTransporter().sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      html,
+    })
+    console.log(`[Mailer] In-stock alert sent for ${productName}`)
+    return true
+  } catch (err) {
+    console.error('[Mailer] Failed to send email:', err.message)
+    return false
+  }
+}
+
+module.exports = { sendPriceDropAlert, sendInStockAlert }

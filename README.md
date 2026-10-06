@@ -13,8 +13,10 @@ A price drop tracker for **Amazon** and **Best Buy** with automatic email alerts
 - **🕷️ Playwright scraper** — headless browser scraping for accurate prices
 - **⏰ Scheduled checks** — cron job runs every 6 hours (configurable)
 - **💾 SQLite storage** — full price history stored locally
-- **📈 Price history charts** — Chart.js graphs for each product
-- **📧 Email alerts** — Nodemailer alerts when price drops by X%
+- **📦 Stock tracking** — current availability and availability history for each product
+- **📈 Price and availability history charts** — Chart.js graphs for each product
+- **🖼️ Latest scrape screenshot** — base64 screenshot in SQLite, viewable from each product
+- **📧 Email alerts** — Nodemailer alerts when prices drop by X% or products come back in stock
 - **📊 Dashboard** — clean web UI to manage all tracked products
 
 ## 🛠 Tech Stack
@@ -64,7 +66,10 @@ ALERT_EMAIL=you@example.com
 CHECK_INTERVAL_HOURS=6
 PRICE_DROP_THRESHOLD=5           # Alert when price drops by this %
 PORT=3000
+DB_PATH=./prices.db              # SQLite database file path (optional)
 ```
+
+`DB_PATH` defaults to `prices.db` in the project root. Relative paths are resolved from the current working directory, and missing parent directories are created automatically.
 
 > **Gmail Setup:** Enable 2FA → Generate App Password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
 
@@ -80,13 +85,19 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+### Run Tests
+
+```bash
+npm test
+```
+
 ## 📖 Usage
 
 1. Paste an Amazon or Best Buy product URL in the text field
 2. Set your alert threshold (e.g., `5` = alert when price drops 5%)
 3. Click **"Track Price"** — the app scrapes the current price
 4. The scheduler checks all products every 6 hours automatically
-5. You'll receive an email alert when a price drop is detected
+5. You'll receive an email alert when a price drop is detected or an out-of-stock product becomes available again
 
 ## 📁 Project Structure
 
@@ -108,10 +119,11 @@ price-tracker/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/products` | List all tracked products |
+| GET | `/api/products` | List tracked products, including current stock status |
 | POST | `/api/products` | Add a new product URL |
 | DELETE | `/api/products/:id` | Remove a product |
-| GET | `/api/products/:id/history` | Get price history |
+| GET | `/api/products/:id/history` | Get price and stock history |
+| GET | `/api/products/:id/screenshot` | Get the latest screenshot captured for a product |
 | POST | `/api/check` | Manually trigger price check |
 
 ## ⚠️ Legal Notice
