@@ -1,4 +1,21 @@
-const { chromium } = require('playwright')
+const { PlaywrightBlocker } = require('@ghostery/adblocker-playwright')
+const { chromium } = require('playwright-extra')
+const StealthPlugin = require('puppeteer-extra-plugin-stealth')
+
+chromium.use(StealthPlugin())
+
+let blockerPromise
+
+function getBlocker() {
+  if (!blockerPromise) {
+    blockerPromise = PlaywrightBlocker.fromPrebuiltAdsAndTracking(fetch).catch((error) => {
+      blockerPromise = undefined
+      throw error
+    })
+  }
+
+  return blockerPromise
+}
 
 /**
  * Detect which store the URL belongs to
@@ -13,18 +30,22 @@ function detectStore(url) {
  * Scrape Amazon product price and name
  */
 async function scrapeAmazon(page, url) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
 
   let name = 'Unknown Product'
   let price = null
+  let inStock = false
 
   try {
-    name = await page.locator('#productTitle').textContent({ timeout: 5000 })
+    name = await page.locator('#productTitle').first().textContent({ timeout: 5000 })
     name = name?.trim() || 'Unknown Product'
-  } catch {}
+  } catch (error) {
+    console.error(`Error scraping Amazon product name: ${error.message}`)
+  }
 
   // Try multiple price selectors
   const priceSelectors = [
+    '.a-price.apex-basisprice-value .a-offscreen',
     '.priceToPay .a-price-whole',
     '#priceblock_ourprice',
     '#priceblock_dealprice',
@@ -34,7 +55,8 @@ async function scrapeAmazon(page, url) {
 
   for (const selector of priceSelectors) {
     try {
-      const priceText = await page.locator(selector).first().textContent({ timeout: 3000 })
+      const priceLocator = page.locator(selector).first()
+      const priceText = await priceLocator.textContent({ timeout: 3000 })
       if (priceText) {
         const parsed = parseFloat(priceText.replace(/[^0-9.]/g, ''))
         if (!isNaN(parsed) && parsed > 0) {
@@ -45,27 +67,40 @@ async function scrapeAmazon(page, url) {
     } catch {}
   }
 
-  return { name, price, store: 'Amazon' }
+  const inStockSelectors = [
+    'input#add-to-cart-button',
+    'a#add-to-cart-button',
+  ]
+  for (const selector of inStockSelectors) {
+    try {
+      const addToCart = await page.locator(selector).first()
+      if (await addToCart.count()) {
+        inStock = true
+        break
+      }
+    } catch {}
+  }
+
+  return { name, price, store: 'Amazon', inStock }
 }
 
 /**
  * Scrape Best Buy product price and name
  */
 async function scrapeBestBuy(page, url) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 })
 
   let name = 'Unknown Product'
   let price = null
+  let inStock = false
 
   try {
-    name = await page.locator('.sku-title h1').textContent({ timeout: 5000 })
+    name = await page.locator('div[data-component-name="ProductHeader"] h1').textContent({ timeout: 5000 })
     name = name?.trim() || 'Unknown Product'
   } catch {}
 
   const priceSelectors = [
-    '.priceView-customer-price span[aria-hidden="true"]',
-    '.priceView-hero-price span[aria-hidden="true"]',
-    '.pricing-price__regular-price',
+    'div[data-testid="price-block-customer-price"] .sr-only',
   ]
 
   for (const selector of priceSelectors) {
@@ -81,7 +116,20 @@ async function scrapeBestBuy(page, url) {
     } catch {}
   }
 
-  return { name, price, store: 'Best Buy' }
+  const inStockSelectors = [
+    'div[data-component-name="AddToCart"] button'
+  ]
+  for (const selector of inStockSelectors) {
+    try {
+      const button = page.locator(selector).first()
+      if (await button.count()) {
+        inStock = (await button.getAttribute('disabled')) === null
+        break
+      }
+    } catch {}
+  }
+
+  return { name, price, store: 'Best Buy', inStock }
 }
 
 /**
@@ -94,17 +142,20 @@ async function scrapeProduct(url) {
     throw new Error('Only Amazon and Best Buy URLs are supported')
   }
 
+  const blocker = await getBlocker()
   const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      ...(store === 'bestbuy' ? ['--disable-http2'] : []),
+    ],
   })
 
   try {
-    const context = await browser.newContext({
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    })
+    const context = await browser.newContext()
     const page = await context.newPage()
+    await blocker.enableBlockingInPage(page)
 
     let result
     if (store === 'amazon') {
@@ -113,6 +164,7 @@ async function scrapeProduct(url) {
       result = await scrapeBestBuy(page, url)
     }
 
+    result.screenshot = await page.screenshot({ type: 'png' })
     return result
   } finally {
     await browser.close()
