@@ -92,9 +92,11 @@ async function checkAllPrices() {
  * Start the cron job
  */
 function startScheduler() {
+  const intervalMinutes = parseInt(process.env.CHECK_INTERVAL_MINUTES || '-1')
   const intervalHours = parseInt(process.env.CHECK_INTERVAL_HOURS || '6')
-  const minute = Math.floor(Math.random() * 60) // Random minute to avoid hitting the same time every run
-  const cronExpression = `${minute} */${intervalHours} * * *`
+  const minute = intervalMinutes < 0 ? Math.floor(Math.random() * 60) : intervalMinutes // Random minute to avoid hitting the same time every run
+  const hour = intervalHours < 1 ? '*' : `*/${intervalHours}` // If intervalHours is less than 1, run every hour
+  const cronExpression = `${minute} ${hour} * * *`
 
   console.log(`[Scheduler] Starting price checks every ${intervalHours} hours (cron: ${cronExpression})`)
 

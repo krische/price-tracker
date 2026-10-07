@@ -1,6 +1,6 @@
 # 📉 Price Tracker
 
-A price drop tracker for **Amazon** and **Best Buy** with automatic email alerts when prices fall below your threshold. Built with Node.js, Playwright, SQLite, and Chart.js.
+A price drop tracker for **Amazon** and **Best Buy** with automatic email alerts when prices fall below your threshold or the product becomes available. Built with Node.js, Playwright, SQLite, and Chart.js.
 
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green?logo=node.js)
 ![Express](https://img.shields.io/badge/Express-4.x-lightgrey?logo=express)
@@ -15,7 +15,7 @@ A price drop tracker for **Amazon** and **Best Buy** with automatic email alerts
 - **💾 SQLite storage** — full price history stored locally
 - **📦 Stock tracking** — current availability and availability history for each product
 - **📈 Price and availability history charts** — Chart.js graphs for each product
-- **🖼️ Latest scrape screenshot** — base64 screenshot in SQLite, viewable from each product
+- **🖼️ Latest scrape screenshot** — view screenshot of last scrape attempt
 - **📧 Email alerts** — Nodemailer alerts when prices drop by X% or products come back in stock
 - **📊 Dashboard** — clean web UI to manage all tracked products
 
@@ -63,6 +63,7 @@ cp .env.example .env
 EMAIL_USER=your_gmail@gmail.com
 EMAIL_PASS=your_app_password     # Gmail App Password (not your regular password)
 ALERT_EMAIL=you@example.com
+CHECK_INTERVAL_MINUTES=-1
 CHECK_INTERVAL_HOURS=6
 PRICE_DROP_THRESHOLD=5           # Alert when price drops by this %
 PORT=3000
@@ -112,7 +113,12 @@ price-tracker/
 ├── public/
 │   └── index.html       # Frontend dashboard (Chart.js)
 ├── .env.example
+├── .releaserc.json
+├── Dockerfile
+├── eslint.config.js
+├── package-lock.json
 └── package.json
+├── README.md
 ```
 
 ## 🔧 API Endpoints
