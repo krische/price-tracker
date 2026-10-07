@@ -177,6 +177,12 @@
       renderProducts(products)
     }
 
+    function parseUtcTimestamp(timestamp) {
+      const isoTimestamp = timestamp.includes('T') ? timestamp : timestamp.replace(' ', 'T')
+      const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(isoTimestamp)
+      return new Date(hasTimezone ? isoTimestamp : `${isoTimestamp}Z`)
+    }
+
     function renderProducts(products) {
       const container = document.getElementById('productsList')
 
@@ -194,7 +200,7 @@
         const priceDrop = p.max_price && p.last_price && p.last_price < p.max_price
           ? `<span class="price-drop">▼ ${(((p.max_price - p.last_price) / p.max_price) * 100).toFixed(1)}% from high</span>`
           : ''
-        const lastChecked = p.last_checked ? new Date(p.last_checked).toLocaleString() : 'Not yet'
+        const lastChecked = p.last_checked ? parseUtcTimestamp(p.last_checked).toLocaleString() : 'Not yet'
 
         return `
           <div class="product-card" id="product-${p.id}">
@@ -340,7 +346,7 @@
         charts[id].price = new Chart(priceCanvas.getContext('2d'), {
           type: 'line',
           data: {
-            labels: priceHistory.map(h => new Date(h.checked_at).toLocaleDateString()),
+            labels: priceHistory.map(h => parseUtcTimestamp(h.checked_at).toLocaleDateString()),
             datasets: [{
               label: 'Price ($)',
               data: priceHistory.map(h => h.price),
@@ -365,7 +371,7 @@
         charts[id].stock = new Chart(stockCanvas.getContext('2d'), {
           type: 'line',
           data: {
-            labels: history.map(h => new Date(h.checked_at).toLocaleDateString()),
+            labels: history.map(h => parseUtcTimestamp(h.checked_at).toLocaleDateString()),
             datasets: [{
               label: 'Availability',
               data: history.map(h => h.in_stock ? 1 : 0),
