@@ -8,6 +8,7 @@
     "dev": "node --watch src/server.js",
     "release": "semantic-release",
     "scrape": "node src/scraper.js",
+    "lint": "eslint .",
     "test": "node --test"
   },
   "dependencies": {
@@ -23,5 +24,10 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0"
   }
 }

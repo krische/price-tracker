@@ -93,7 +93,8 @@ async function checkAllPrices() {
  */
 function startScheduler() {
   const intervalHours = parseInt(process.env.CHECK_INTERVAL_HOURS || '6')
-  const cronExpression = `0 */${intervalHours} * * *`
+  const minute = Math.floor(Math.random() * 60) // Random minute to avoid hitting the same time every run
+  const cronExpression = `${minute} */${intervalHours} * * *`
 
   console.log(`[Scheduler] Starting price checks every ${intervalHours} hours (cron: ${cronExpression})`)
 
