@@ -30,7 +30,7 @@ function detectStore(url) {
  * Scrape Amazon product price and name
  */
 async function scrapeAmazon(page, url) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
 
   let name = 'Unknown Product'
   let price = null
@@ -88,7 +88,7 @@ async function scrapeAmazon(page, url) {
  * Scrape Best Buy product price and name
  */
 async function scrapeBestBuy(page, url) {
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
 
   let name = 'Unknown Product'
   let price = null
