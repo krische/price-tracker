@@ -2,6 +2,7 @@ require('dotenv').config()
 
 const express = require('express')
 const path = require('path')
+const { version } = require('../package.json')
 const { getDb } = require('./db')
 const { scrapeProduct } = require('./scraper')
 const { startScheduler } = require('./scheduler')
@@ -13,6 +14,11 @@ app.use(express.json())
 app.use(express.static(path.join(__dirname, '..', 'public')))
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
+
+// GET application version
+app.get('/api/version', (req, res) => {
+  res.json({ version })
+})
 
 // GET all tracked products
 app.get('/api/products', (req, res) => {
