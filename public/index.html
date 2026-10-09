@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
+    body { min-height: 100vh; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
     
     header {
       background: linear-gradient(135deg, #1e40af, #3b82f6);
@@ -21,7 +21,9 @@
     header h1 { font-size: 1.5rem; font-weight: 700; }
     header p { opacity: 0.8; font-size: 0.875rem; margin-left: auto; }
 
-    main { max-width: 960px; margin: 32px auto; padding: 0 16px; }
+    main { flex: 1; width: 100%; max-width: 960px; margin: 32px auto; padding: 0 16px; }
+
+    footer { padding: 16px; color: #94a3b8; font-size: 0.75rem; text-align: center; }
 
     .card {
       background: white;
@@ -168,8 +170,17 @@
     </div>
   </main>
 
+  <footer>Version <span id="appVersion">Loading...</span></footer>
+
   <script>
     const charts = {}
+
+    async function loadVersion() {
+      const res = await fetch('/api/version')
+      if (!res.ok) throw new Error('Failed to load app version')
+      const { version } = await res.json()
+      document.getElementById('appVersion').textContent = version
+    }
 
     async function loadProducts() {
       const res = await fetch('/api/products')
@@ -426,6 +437,7 @@
       err.style.display = 'block'
     }
 
+    loadVersion().catch(err => console.error(err))
     loadProducts()
   </script>
 </body>
