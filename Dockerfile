@@ -1,6 +1,6 @@
 FROM node:24.21.0-bookworm
 
-LABEL org.opencontainers.image.source=https://github.com/mistacarta/price-tracker
+LABEL org.opencontainers.image.source=https://github.com/krische/price-tracker
 LABEL org.opencontainers.image.description="Price drop and stock tracker for Amazon and Best Buy — get email alerts when prices fall or items are back in stock."
 
 WORKDIR /app

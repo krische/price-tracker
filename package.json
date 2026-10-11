@@ -1,5 +1,5 @@
 {
-  "name": "@mistacarta/price-tracker",
+  "name": "@krische/price-tracker",
   "version": "2.0.0",
   "description": "Price drop tracker for Amazon and Best Buy with email alerts",
   "main": "src/server.js",
