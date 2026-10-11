@@ -42,7 +42,7 @@ A price drop tracker for **Amazon** and **Best Buy** with automatic email alerts
 
 ```bash
 # Clone the repo
-git clone https://github.com/mistacarta/price-tracker.git
+git clone https://github.com/krische/price-tracker.git
 cd price-tracker
 
 # Install dependencies
