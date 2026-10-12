@@ -1,6 +1,9 @@
-const Database = require('better-sqlite3')
-const fs = require('fs')
-const path = require('path')
+import Database from 'better-sqlite3'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const DB_PATH = process.env.DB_PATH
   ? path.resolve(process.env.DB_PATH)
@@ -78,4 +81,4 @@ function initSchema() {
   }
 }
 
-module.exports = { getDb }
+export { getDb }

@@ -1,6 +1,6 @@
-const { PlaywrightBlocker } = require('@ghostery/adblocker-playwright')
-const { chromium } = require('playwright-extra')
-const StealthPlugin = require('puppeteer-extra-plugin-stealth')
+import { PlaywrightBlocker } from '@ghostery/adblocker-playwright'
+import { chromium } from 'playwright-extra'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 
 chromium.use(StealthPlugin())
 
@@ -168,4 +168,4 @@ async function scrapeProduct(url) {
   }
 }
 
-module.exports = { scrapeProduct, detectStore }
+export { scrapeProduct, detectStore }
