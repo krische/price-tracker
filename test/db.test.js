@@ -1,10 +1,13 @@
-const assert = require('node:assert/strict')
-const { spawnSync } = require('node:child_process')
-const fs = require('node:fs')
-const os = require('node:os')
-const path = require('node:path')
-const { after, test } = require('node:test')
-const Database = require('better-sqlite3')
+import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { after, test } from 'node:test'
+import Database from 'better-sqlite3'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const temporaryDirectories = []
 
@@ -22,8 +25,9 @@ function createTemporaryDirectory() {
 
 function initializeDatabase(databasePath) {
   const result = spawnSync(process.execPath, [
+    '--input-type=module',
     '-e',
-    "require('./src/db').getDb().close()",
+    "import('./src/db.js').then(({ getDb }) => getDb().close())",
   ], {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, DB_PATH: databasePath },

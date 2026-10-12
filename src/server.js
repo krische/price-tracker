@@ -1,11 +1,15 @@
-require('dotenv').config()
+import 'dotenv/config'
 
-const express = require('express')
-const path = require('path')
-const { version } = require('../package.json')
-const { getDb } = require('./db')
-const { scrapeProduct } = require('./scraper')
-const { startScheduler } = require('./scheduler')
+import express from 'express'
+import path from 'node:path'
+import packageJson from '../package.json' with { type: 'json' }
+import { fileURLToPath } from 'node:url'
+import { getDb } from './db.js'
+import { scrapeProduct } from './scraper.js'
+import { startScheduler, checkAllPrices } from './scheduler.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const { version } = packageJson
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -147,7 +151,6 @@ app.get('/api/products/:id/history', (req, res) => {
 
 // POST manually trigger a price check
 app.post('/api/check', async (req, res) => {
-  const { checkAllPrices } = require('./scheduler')
   try {
     res.json({ message: 'Price check started' })
     checkAllPrices()

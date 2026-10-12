@@ -63,11 +63,14 @@ cp .env.example .env
 EMAIL_USER=your_gmail@gmail.com
 EMAIL_PASS=your_app_password     # Gmail App Password (not your regular password)
 ALERT_EMAIL=you@example.com
-CHECK_INTERVAL_HOURS=6
+CHECK_INTERVAL_EXPRESSION="0 */6 * * *"
+CHECK_INTERVAL_JITTER=0
 PRICE_DROP_THRESHOLD=5           # Alert when price drops by this %
 PORT=3000
 DB_PATH=./prices.db              # SQLite database file path (optional)
 ```
+
+Set `CHECK_INTERVAL_EXPRESSION` to a cron expression to choose the check schedule. For example, `"*/15 * * * *"` checks every 15 minutes; the default `"0 */6 * * *"` checks every six hours.
 
 `DB_PATH` defaults to `prices.db` in the project root. Relative paths are resolved from the current working directory, and missing parent directories are created automatically.
 

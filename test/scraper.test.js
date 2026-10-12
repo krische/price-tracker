@@ -1,6 +1,6 @@
-const assert = require('node:assert/strict')
-const { test } = require('node:test')
-const { detectStore, scrapeProduct } = require('../src/scraper')
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { detectStore, scrapeProduct } from '../src/scraper.js'
 
 test('detects supported store URLs', () => {
   assert.equal(detectStore('https://www.amazon.com/dp/B000000000'), 'amazon')

@@ -1,7 +1,7 @@
-const cron = require('node-cron')
-const { getDb } = require('./db')
-const { scrapeProduct } = require('./scraper')
-const { sendPriceDropAlert, sendInStockAlert } = require('./mailer')
+import cron from 'node-cron'
+import { getDb } from './db.js'
+import { scrapeProduct } from './scraper.js'
+import { sendPriceDropAlert, sendInStockAlert } from './mailer.js'
 
 const THRESHOLD = parseFloat(process.env.PRICE_DROP_THRESHOLD || '5')
 
@@ -92,19 +92,25 @@ async function checkAllPrices() {
  * Start the cron job
  */
 function startScheduler() {
-  const intervalHours = parseInt(process.env.CHECK_INTERVAL_HOURS || '6')
-  const minute = Math.floor(Math.random() * 60) // Random minute to avoid hitting the same time every run
-  const cronExpression = `${minute} */${intervalHours} * * *`
+  const cronExpression = (process.env.CHECK_INTERVAL_EXPRESSION || '').trim() || '0 */6 * * *'
+  const configuredIntervalJitter = parseInt(process.env.CHECK_INTERVAL_JITTER || '0')
+  const intervalJitter = Number.isNaN(configuredIntervalJitter) || configuredIntervalJitter < 0 ? 0 : configuredIntervalJitter
 
-  console.log(`[Scheduler] Starting price checks every ${intervalHours} hours (cron: ${cronExpression})`)
+  console.log(`[Scheduler] Starting price checks with cron expression: ${cronExpression}`)
 
-  cron.schedule(cronExpression, () => {
-    console.log(`[Scheduler] Running scheduled price check at ${new Date().toISOString()}`)
-    checkAllPrices().catch(err => console.error('[Scheduler] Error:', err))
-  })
+  cron.schedule(
+    cronExpression,
+    () => {
+      console.log(`[Scheduler] Running scheduled price check at ${new Date().toISOString()}`)
+      checkAllPrices().catch(err => console.error('[Scheduler] Error:', err))
+    },
+    {
+      maxRandomDelay: intervalJitter * 1000, // Random jitter in milliseconds
+    }
+  )
 
   // Run once on startup after a short delay
   setTimeout(() => checkAllPrices(), 5000)
 }
 
-module.exports = { startScheduler, checkAllPrices }
+export { startScheduler, checkAllPrices }
