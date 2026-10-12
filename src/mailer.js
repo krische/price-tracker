@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer')
+import nodemailer from 'nodemailer'
 
 let transporter
 
@@ -126,4 +126,4 @@ async function sendInStockAlert({ productName, url, store }) {
   }
 }
 
-module.exports = { sendPriceDropAlert, sendInStockAlert }
+export { sendPriceDropAlert, sendInStockAlert }
