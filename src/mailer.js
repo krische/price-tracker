@@ -18,7 +18,7 @@ function getTransporter() {
 /**
  * Send a price drop alert email
  */
-async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store, percentDrop }) {
+async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store, percentDrop, screenshot }) {
   const to = process.env.ALERT_EMAIL
   if (!to || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.log('[Mailer] Email not configured — skipping alert')
@@ -35,6 +35,8 @@ async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store,
         <h3 style="margin: 0 0 8px 0; color: #166534;">${productName}</h3>
         <p style="margin: 4px 0; color: #15803d; font-size: 14px;">Store: ${store}</p>
       </div>
+
+      <img src="cid:product-screenshot" alt="Latest product page screenshot" style="display: block; width: 100%; height: auto; margin: 16px 0; border: 1px solid #e5e7eb; border-radius: 8px;">
 
       <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
         <tr>
@@ -70,6 +72,12 @@ async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store,
       to,
       subject,
       html,
+      attachments: [{
+        filename: 'product-screenshot.png',
+        content: screenshot,
+        contentType: 'image/png',
+        cid: 'product-screenshot',
+      }],
     })
     console.log(`[Mailer] Alert sent for ${productName}`)
     return true
@@ -82,7 +90,7 @@ async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store,
 /**
  * Send an alert when a product becomes available again
  */
-async function sendInStockAlert({ productName, url, store }) {
+async function sendInStockAlert({ productName, url, store, screenshot }) {
   const to = process.env.ALERT_EMAIL
   if (!to || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.log('[Mailer] Email not configured — skipping alert')
@@ -98,6 +106,8 @@ async function sendInStockAlert({ productName, url, store }) {
         <h3 style="margin: 0 0 8px 0; color: #166534;">${productName}</h3>
         <p style="margin: 4px 0; color: #15803d; font-size: 14px;">Store: ${store}</p>
       </div>
+
+      <img src="cid:product-screenshot" alt="Latest product page screenshot" style="display: block; width: 100%; height: auto; margin: 16px 0; border: 1px solid #e5e7eb; border-radius: 8px;">
 
       <p style="color: #4b5563;">This product is now available to purchase.</p>
 
@@ -117,6 +127,12 @@ async function sendInStockAlert({ productName, url, store }) {
       to,
       subject,
       html,
+      attachments: [{
+        filename: 'product-screenshot.png',
+        content: screenshot,
+        contentType: 'image/png',
+        cid: 'product-screenshot',
+      }],
     })
     console.log(`[Mailer] In-stock alert sent for ${productName}`)
     return true

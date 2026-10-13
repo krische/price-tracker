@@ -58,6 +58,7 @@ async function checkAllPrices() {
           productName: result.name,
           url: product.url,
           store: result.store,
+          screenshot: result.screenshot,
         })
       }
 
@@ -74,6 +75,7 @@ async function checkAllPrices() {
             newPrice,
             store: result.store,
             percentDrop,
+            screenshot: result.screenshot,
           })
         }
       }
