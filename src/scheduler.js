@@ -83,6 +83,20 @@ async function checkAllPrices() {
       // Small delay between scrapes
       await new Promise(r => setTimeout(r, 2000))
     } catch (err) {
+      if (err.screenshot) {
+        try {
+          db.prepare(`
+            UPDATE products
+            SET last_screenshot = ?, last_checked = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).run(err.screenshot.toString('base64'), product.id)
+        } catch (saveError) {
+          console.error(`[Scheduler] Failed to save error screenshot for ${product.url}:`, saveError.message)
+        }
+      }
+      if (err.screenshotError) {
+        console.error(`[Scheduler] Failed to capture error screenshot for ${product.url}:`, err.screenshotError.message)
+      }
       console.error(`[Scheduler] Error checking ${product.url}:`, err.message)
     }
   }
