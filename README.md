@@ -60,6 +60,8 @@ cp .env.example .env
 
 ```bash
 # .env
+AUTH_USERNAME=your_username
+AUTH_PASSWORD=use_a_long_unique_password
 EMAIL_USER=your_gmail@gmail.com
 EMAIL_PASS=your_app_password     # Gmail App Password (not your regular password)
 ALERT_EMAIL=you@example.com
@@ -69,6 +71,8 @@ PRICE_DROP_THRESHOLD=5           # Alert when price drops by this %
 PORT=3000
 DB_PATH=./prices.db              # SQLite database file path (optional)
 ```
+
+`AUTH_USERNAME` and `AUTH_PASSWORD` are required to start the application. They configure the single login account used to access the dashboard and API. The login session is stored in an HttpOnly, SameSite cookie and expires after seven days; restarting the app also ends active sessions. In production the cookie is marked Secure.
 
 Set `CHECK_INTERVAL_EXPRESSION` to a cron expression to choose the check schedule. For example, `"*/15 * * * *"` checks every 15 minutes; the default `"0 */6 * * *"` checks every six hours.
 
@@ -122,12 +126,16 @@ price-tracker/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| POST | `/api/login` | Log in with the configured username and password |
+| POST | `/api/logout` | End the current login session |
 | GET | `/api/products` | List tracked products, including current stock status |
 | POST | `/api/products` | Add a new product URL |
 | DELETE | `/api/products/:id` | Remove a product |
 | GET | `/api/products/:id/history` | Get price and stock history |
 | GET | `/api/products/:id/screenshot` | Get the latest screenshot captured for a product |
 | POST | `/api/check` | Manually trigger price check |
+
+All API endpoints except `/api/login` and `/api/version` require a valid login session.
 
 ## ⚠️ Legal Notice
 
