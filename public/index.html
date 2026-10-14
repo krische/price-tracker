@@ -36,7 +36,7 @@
     .card h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 16px; color: #0f172a; }
 
     .add-form { display: flex; gap: 12px; flex-wrap: wrap; }
-    .add-form input {
+    .add-form input, .login-form input {
       flex: 1;
       min-width: 200px;
       padding: 10px 14px;
@@ -46,8 +46,13 @@
       outline: none;
       transition: border-color 0.15s;
     }
-    .add-form input:focus { border-color: #3b82f6; }
+    .add-form input:focus, .login-form input:focus { border-color: #3b82f6; }
     .add-form input.threshold { max-width: 120px; }
+    .login-card { max-width: 420px; margin: 64px auto; }
+    .login-form { display: flex; flex-direction: column; gap: 12px; }
+    .login-form input { width: 100%; }
+    #loginError { color: #dc2626; font-size: 0.875rem; }
+    [hidden] { display: none !important; }
 
     button {
       padding: 10px 20px;
@@ -138,9 +143,21 @@
       <div style="opacity:0.8;font-size:0.8rem">Amazon & Best Buy</div>
     </div>
     <p id="lastCheck" class="last-check"></p>
+    <button id="logoutBtn" class="btn-secondary btn-sm" onclick="logout()" hidden>Log out</button>
   </header>
 
   <main>
+    <section id="loginCard" class="card login-card" hidden>
+      <h2>Log in</h2>
+      <form class="login-form" onsubmit="login(event)">
+        <input type="text" id="usernameInput" name="username" placeholder="Username" autocomplete="username" required />
+        <input type="password" id="passwordInput" name="password" placeholder="Password" autocomplete="current-password" required />
+        <button class="btn-primary" id="loginBtn" type="submit">Log in</button>
+        <div id="loginError" role="alert" hidden></div>
+      </form>
+    </section>
+
+    <div id="dashboard" hidden>
     <!-- Add Product -->
     <div class="card">
       <h2>Track a New Product</h2>
@@ -168,6 +185,7 @@
         </div>
       </div>
     </div>
+    </div>
   </main>
 
   <footer>Version <span id="appVersion">Loading...</span></footer>
@@ -175,17 +193,74 @@
   <script>
     const charts = {}
 
+    function showLogin() {
+      document.getElementById('loginCard').hidden = false
+      document.getElementById('dashboard').hidden = true
+      document.getElementById('logoutBtn').hidden = true
+    }
+
+    function showDashboard() {
+      document.getElementById('loginCard').hidden = true
+      document.getElementById('dashboard').hidden = false
+      document.getElementById('logoutBtn').hidden = false
+    }
+
+    async function apiFetch(url, options) {
+      const res = await fetch(url, options)
+      if (res.status === 401) showLogin()
+      return res
+    }
+
     async function loadVersion() {
-      const res = await fetch('/api/version')
+      const res = await apiFetch('/api/version')
       if (!res.ok) throw new Error('Failed to load app version')
       const { version } = await res.json()
       document.getElementById('appVersion').textContent = version
     }
 
     async function loadProducts() {
-      const res = await fetch('/api/products')
+      const res = await apiFetch('/api/products')
+      if (res.status === 401) {
+        return false
+      }
+      if (!res.ok) throw new Error('Failed to load products')
       const products = await res.json()
+      showDashboard()
       renderProducts(products)
+      return true
+    }
+
+    async function login(event) {
+      event.preventDefault()
+      const button = document.getElementById('loginBtn')
+      const error = document.getElementById('loginError')
+      error.hidden = true
+      button.disabled = true
+
+      try {
+        const res = await apiFetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('usernameInput').value,
+            password: document.getElementById('passwordInput').value,
+          }),
+        })
+        if (!res.ok) throw new Error('Invalid username or password')
+        document.getElementById('passwordInput').value = ''
+        await loadProducts()
+      } catch (err) {
+        error.textContent = err.message
+        error.hidden = false
+      } finally {
+        button.disabled = false
+      }
+    }
+
+    async function logout() {
+      await apiFetch('/api/logout', { method: 'POST' })
+      showLogin()
+      document.getElementById('usernameInput').focus()
     }
 
     function parseUtcTimestamp(timestamp) {
@@ -282,7 +357,7 @@
       err.style.display = 'none'
 
       try {
-        const res = await fetch('/api/products', {
+        const res = await apiFetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url, alertThreshold: parseFloat(threshold) }),
@@ -301,7 +376,7 @@
 
     async function removeProduct(id) {
       if (!confirm('Remove this product from tracking?')) return
-      await fetch(`/api/products/${id}`, { method: 'DELETE' })
+      await apiFetch(`/api/products/${id}`, { method: 'DELETE' })
       await loadProducts()
     }
 
@@ -338,7 +413,7 @@
 
       wrapper.style.display = 'block'
 
-      const res = await fetch(`/api/products/${id}/history`)
+      const res = await apiFetch(`/api/products/${id}/history`)
       const history = await res.json()
 
       const priceHistory = history.filter(h => h.price !== null)
@@ -422,7 +497,7 @@
       const btn = event.target
       btn.disabled = true
       btn.textContent = '⏳ Checking...'
-      await fetch('/api/check', { method: 'POST' })
+      await apiFetch('/api/check', { method: 'POST' })
       setTimeout(async () => {
         await loadProducts()
         btn.disabled = false
@@ -438,7 +513,7 @@
     }
 
     loadVersion().catch(err => console.error(err))
-    loadProducts()
+    loadProducts().catch(err => console.error(err))
   </script>
 </body>
 </html>

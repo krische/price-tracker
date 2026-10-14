@@ -4,6 +4,7 @@ import express from 'express'
 import path from 'node:path'
 import packageJson from '../package.json' with { type: 'json' }
 import { fileURLToPath } from 'node:url'
+import { createAuth } from './auth.js'
 import { getDb } from './db.js'
 import { scrapeProduct } from './scraper.js'
 import { startScheduler, checkAllPrices } from './scheduler.js'
@@ -13,16 +14,28 @@ const { version } = packageJson
 
 const app = express()
 const PORT = process.env.PORT || 3000
+const auth = createAuth({
+  username: process.env.AUTH_USERNAME,
+  password: process.env.AUTH_PASSWORD,
+})
 
 app.use(express.json())
 app.use(express.static(path.join(__dirname, '..', 'public')))
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 
+// POST log in with the configured account
+app.post('/api/login', auth.login)
+
 // GET application version
 app.get('/api/version', (req, res) => {
   res.json({ version })
 })
+
+app.use('/api', auth.requireAuth)
+
+// POST log out
+app.post('/api/logout', auth.logout)
 
 // GET all tracked products
 app.get('/api/products', (req, res) => {
