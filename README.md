@@ -117,7 +117,8 @@ price-tracker/
 │   ├── mailer.js        # Nodemailer email alerts
 │   └── db.js            # SQLite database setup
 ├── public/
-│   └── index.html       # Frontend dashboard (Chart.js)
+│   ├── index.html       # Frontend dashboard (Chart.js)
+│   └── favicon.png      # Product tracking favicon
 ├── .env.example
 └── package.json
 ```
