@@ -145,13 +145,17 @@ async function scrapeProduct(url) {
     ],
   })
 
+  let page
   try {
     const context = await browser.newContext({
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      extraHTTPHeaders: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
       viewport: { width: 1920, height: 1200 },
     })
-    const page = await context.newPage()
+    page = await context.newPage()
     await blocker.enableBlockingInPage(page)
 
     let result
@@ -163,6 +167,16 @@ async function scrapeProduct(url) {
 
     result.screenshot = await page.screenshot({ type: 'png' })
     return result
+  } catch (error) {
+    if (page) {
+      try {
+        console.log(`[Scraper] Error occurred. Capturing screenshot.`)
+        error.screenshot = await page.screenshot({ type: 'png' })
+      } catch (screenshotError) {
+        error.screenshotError = screenshotError
+      }
+    }
+    throw error
   } finally {
     await browser.close()
   }
