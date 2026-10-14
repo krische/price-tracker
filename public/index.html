@@ -85,8 +85,9 @@
     }
     .product-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
-    .product-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .product-info h3 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 4px; }
+    .product-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .product-info { flex: 1 1 220px; min-width: 0; }
+    .product-info h3 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 4px; overflow-wrap: anywhere; }
     .product-info .store-badge {
       display: inline-block;
       padding: 2px 8px;
@@ -112,7 +113,7 @@
     .price-meta { font-size: 0.75rem; color: #64748b; }
     .price-drop { color: #16a34a; font-weight: 600; }
 
-    .product-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .product-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
     .chart-wrapper { margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 16px; display: none; }
     .history-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
