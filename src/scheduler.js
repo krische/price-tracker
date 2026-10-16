@@ -1,7 +1,7 @@
 import cron from 'node-cron'
 import { getDb } from './db.js'
 import { scrapeProduct } from './scraper.js'
-import { sendPriceDropAlert, sendInStockAlert } from './mailer.js'
+import { sendInStockNotification, sendPriceDropNotification } from './notifications.js'
 
 const THRESHOLD = parseFloat(process.env.PRICE_DROP_THRESHOLD || '5')
 
@@ -54,7 +54,7 @@ async function checkAllPrices() {
       // Alert only on an out-of-stock to in-stock transition.
       if (Number(product.in_stock) === 0 && result.inStock) {
         console.log(`[Scheduler] Back in stock: ${result.name}`)
-        await sendInStockAlert({
+        await sendInStockNotification({
           productName: result.name,
           url: product.url,
           store: result.store,
@@ -68,7 +68,7 @@ async function checkAllPrices() {
 
         if (percentDrop >= THRESHOLD) {
           console.log(`[Scheduler] Price drop detected! ${oldPrice} → ${newPrice} (${percentDrop.toFixed(1)}%)`)
-          await sendPriceDropAlert({
+          await sendPriceDropNotification({
             productName: result.name,
             url: product.url,
             oldPrice,
