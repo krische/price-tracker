@@ -10,7 +10,7 @@ updates:
       interval: weekly
   - package-ecosystem: github-actions
     directory: /
-    group:
+    groups:
       github-actions:
         patterns: ["*"]
     schedule:
