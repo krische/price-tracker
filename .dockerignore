@@ -1,0 +1,7 @@
+.git
+.env*
+node_modules
+prices.db*
+coverage
+npm-debug.log*
+.DS_Store
