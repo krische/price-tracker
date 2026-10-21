@@ -34,7 +34,7 @@ jobs:
         with:
           node-version-file: package.json
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
       - name: Publish Release
         run: npx --package semantic-release --package @codedependant/semantic-release-docker --package @semantic-release/commit-analyzer --package conventional-changelog-conventionalcommits semantic-release
         env:
