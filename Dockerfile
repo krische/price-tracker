@@ -14,7 +14,7 @@ RUN apt-get update \
 
 # Application
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev  --no-audit --no-fund
 
 # Install Playwright and its dependencies
 RUN npx playwright install --with-deps chromium
