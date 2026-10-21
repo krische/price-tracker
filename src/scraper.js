@@ -85,6 +85,16 @@ async function scrapeAmazon(page, url) {
 async function scrapeBestBuy(page, url) {
   await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
 
+  await page.addStyleTag({
+    content: `
+      html, body {
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+      }
+    `,
+  })
+
   let name = 'Unknown Product'
   let price = null
   let inStock = false
