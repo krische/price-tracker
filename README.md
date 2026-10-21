@@ -2,8 +2,8 @@
 
 A price drop tracker for **Amazon** and **Best Buy** with optional email and Pushover alerts when prices fall below your threshold or an item comes back in stock. Built with Node.js, Playwright, SQLite, and Chart.js.
 
-![Node.js](https://img.shields.io/badge/Node.js-18+-green?logo=node.js)
-![Express](https://img.shields.io/badge/Express-4.x-lightgrey?logo=express)
+![Node.js](https://img.shields.io/badge/Node.js-22+-green?logo=node.js)
+![Express](https://img.shields.io/badge/Express-5.x-lightgrey?logo=express)
 ![SQLite](https://img.shields.io/badge/SQLite-3-blue?logo=sqlite)
 ![Playwright](https://img.shields.io/badge/Playwright-1.x-red?logo=playwright)
 
@@ -37,7 +37,7 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - A Gmail account for email alerts (optional)
 - A Pushover account and application API token for push alerts (optional)
 
