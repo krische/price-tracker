@@ -22,16 +22,16 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 
 ## 🛠 Tech Stack
 
-| Component | Technology |
-|-----------|-----------|
-| Backend | Node.js + Express |
-| Scraping | Playwright (headless Chromium) |
-| Database | SQLite (better-sqlite3) |
-| Email notifications (optional) | Nodemailer |
-| Push notifications (optional) | Pushover API |
-| Scheduling | node-cron |
-| Charts | Chart.js (CDN) |
-| Frontend | Vanilla HTML/CSS/JS |
+| Component                      | Technology                     |
+|--------------------------------|--------------------------------|
+| Backend                        | Node.js + Express              |
+| Scraping                       | Playwright (headless Chromium) |
+| Database                       | SQLite (better-sqlite3)        |
+| Email notifications (optional) | Nodemailer                     |
+| Push notifications (optional)  | Pushover API                   |
+| Scheduling                     | node-cron                      |
+| Charts                         | Chart.js (CDN)                 |
+| Frontend                       | Vanilla HTML/CSS/JS            |
 
 ## 🚀 Getting Started
 
@@ -42,6 +42,27 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 - A Pushover account and application API token for push alerts (optional)
 
 ### Installation
+
+#### Docker container
+
+Pull and run the published image from GitHub Container Registry. Replace the example login values with a unique username and strong password:
+
+```bash
+docker pull ghcr.io/krische/price-tracker:latest
+
+docker run -d \
+  --name price-tracker \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -v /path/to/data:/data \
+  -e AUTH_USERNAME=your_username \
+  -e AUTH_PASSWORD=use_a_long_unique_password \
+  ghcr.io/krische/price-tracker:latest
+```
+
+Open [http://localhost:3000](http://localhost:3000) and sign in with the configured username and password. The mounted volume keeps the SQLite database when the container is replaced. To enable email or Pushover alerts, pass the relevant optional [environment variables](#environment-variables) listed below with additional `-e NAME=value` options.
+
+#### Local
 
 ```bash
 # Clone the repo
