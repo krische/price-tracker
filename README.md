@@ -56,12 +56,16 @@ docker run -d \
   --restart unless-stopped \
   -p 3000:3000 \
   -v /path/to/data:/data \
+  -e PUID=$(id -u) \
+  -e PGID=$(id -g) \
   -e AUTH_USERNAME=your_username \
   -e AUTH_PASSWORD=use_a_long_unique_password \
   ghcr.io/krische/price-tracker:latest
 ```
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with the configured username and password. The mounted volume keeps the SQLite database when the container is replaced. To enable email or Pushover alerts, pass the relevant optional [environment variables](#environment-variables) listed below with additional `-e NAME=value` options.
+
+`PUID` and `PGID` set the numeric user and group IDs used to run the application in the container. They default to `0` (root) if omitted; set them to the owner IDs of the mounted data directory to allow the application to write its database.
 
 #### Local
 
