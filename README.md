@@ -37,11 +37,33 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 
 ### Prerequisites
 
-- Node.js 22+
+- Docker Engine or Docker Desktop (for the Docker installation)
+- Node.js 22+ (for local installation)
 - A Gmail account for email alerts (optional)
 - A Pushover account and application API token for push alerts (optional)
 
 ### Installation
+
+#### Docker container
+
+Pull and run the published image from GitHub Container Registry. Replace the example login values with a unique username and strong password:
+
+```bash
+docker pull ghcr.io/krische/price-tracker:latest
+
+docker run -d \
+  --name price-tracker \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -v price-tracker-data:/data \
+  -e AUTH_USERNAME=your_username \
+  -e AUTH_PASSWORD=use_a_long_unique_password \
+  ghcr.io/krische/price-tracker:latest
+```
+
+Open [http://localhost:3000](http://localhost:3000) and sign in with the configured username and password. The named Docker volume keeps the SQLite database when the container is replaced. To enable email or Pushover alerts, pass the relevant optional environment variables listed below with additional `-e NAME=value` options.
+
+#### Local
 
 ```bash
 # Clone the repo
@@ -57,6 +79,9 @@ npx playwright install chromium
 # Set up environment variables
 cp .env.example .env
 # Edit .env with credentials for any notification methods you want to enable
+
+# Start the server
+npm start
 ```
 
 ### Environment Variables
@@ -87,6 +112,8 @@ Notifications are optional and independent: configure all three email variables 
 Set `CHECK_INTERVAL_EXPRESSION` to a cron expression to choose the check schedule. For example, `"*/15 * * * *"` checks every 15 minutes; the default `"0 */6 * * *"` checks every six hours.
 
 `DB_PATH` defaults to `prices.db` in the project root. Relative paths are resolved from the current working directory, and missing parent directories are created automatically.
+
+The Docker image sets `DB_PATH=/data/prices.db`; mount `/data` as a volume to keep the database when replacing the container.
 
 > **Gmail Setup:** Enable 2FA → Generate App Password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
 
