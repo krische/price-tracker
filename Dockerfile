@@ -14,7 +14,8 @@ RUN apt-get update \
 
 # Application
 COPY package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm install-scripts approve better-sqlite3 && \
+  npm ci --omit=dev --no-audit --no-fund
 
 # Install Playwright and its dependencies
 RUN npx playwright install --with-deps chromium
