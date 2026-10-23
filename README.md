@@ -62,6 +62,8 @@ docker run -d \
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with the configured username and password. The mounted volume keeps the SQLite database when the container is replaced. To enable email or Pushover alerts, pass the relevant optional [environment variables](#environment-variables) listed below with additional `-e NAME=value` options.
 
+When deployed behind a reverse proxy, the app trusts one proxy hop to identify client IPs for rate limiting. Keep the app reachable only through that trusted proxy, and configure it to set or safely append `X-Forwarded-For`. If your deployment uses a different proxy topology, adjust the `trust proxy` setting in `src/server.js` to match it; do not use blanket proxy trust (`true`) unless every path to the app passes through trusted proxies.
+
 #### Local
 
 ```bash

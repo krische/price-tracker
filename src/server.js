@@ -15,6 +15,7 @@ const { version } = packageJson
 
 const app = express()
 const PORT = process.env.PORT || 3000
+app.set('trust proxy', 1)
 const auth = createAuth({
   username: process.env.AUTH_USERNAME,
   password: process.env.AUTH_PASSWORD,
