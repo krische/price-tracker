@@ -21,8 +21,11 @@ function getBlocker() {
  * Detect which store the URL belongs to
  */
 function detectStore(url) {
-  if (url.includes('amazon.com')) return 'amazon'
-  if (url.includes('bestbuy.com')) return 'bestbuy'
+  try {
+    const hostname = new URL(url).hostname.toLowerCase()
+    if (hostname === 'amazon.com' || hostname.endsWith('.amazon.com')) return 'amazon'
+    if (hostname === 'bestbuy.com' || hostname.endsWith('.bestbuy.com')) return 'bestbuy'
+  } catch {}
   return 'unknown'
 }
 
