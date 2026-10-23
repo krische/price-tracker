@@ -127,7 +127,7 @@ app.delete('/api/products/:id', (req, res) => {
 })
 
 // GET the latest screenshot captured for a product
-app.get('/api/products/:id/screenshot', (req, res, next) => {
+app.get('/api/products/:id/screenshot', historyRateLimiter, (req, res, next) => {
   const db = getDb()
   const { id } = req.params
 
