@@ -21,6 +21,13 @@ function getDb() {
   return db
 }
 
+function closeDb() {
+  if (db) {
+    db.close()
+    db = undefined
+  }
+}
+
 function initSchema() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS products (
@@ -81,4 +88,4 @@ function initSchema() {
   }
 }
 
-export { getDb }
+export { getDb, closeDb }
