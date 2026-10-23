@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import cron from 'node-cron'
 import { test } from 'node:test'
-import { startScheduler } from '../src/scheduler.js'
+import { startScheduler, stopScheduler } from '../src/scheduler.js'
 
 function startSchedulerWithExpression(t, expression) {
   const previousExpression = process.env.CHECK_INTERVAL_EXPRESSION
@@ -43,4 +43,19 @@ test('defaults to every six hours when the expression is blank', (t) => {
 
 test('trims surrounding whitespace from the configured expression', (t) => {
   assert.equal(startSchedulerWithExpression(t, '  */15 * * * *  '), '*/15 * * * *')
+})
+
+test('stops scheduled and startup price checks', async (t) => {
+  const task = { stop: t.mock.fn() }
+  const startupTimer = {}
+  const clearTimeout = t.mock.method(globalThis, 'clearTimeout')
+  t.mock.method(cron, 'schedule', () => task)
+  t.mock.method(globalThis, 'setTimeout', () => startupTimer)
+  t.mock.method(console, 'log', () => {})
+
+  startScheduler()
+  await stopScheduler()
+
+  assert.equal(task.stop.mock.callCount(), 1)
+  assert.deepEqual(clearTimeout.mock.calls[0].arguments, [startupTimer])
 })

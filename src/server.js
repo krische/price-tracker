@@ -5,9 +5,9 @@ import path from 'node:path'
 import packageJson from '../package.json' with { type: 'json' }
 import { fileURLToPath } from 'node:url'
 import { createAuth } from './auth.js'
-import { getDb } from './db.js'
+import { closeDb, getDb } from './db.js'
 import { scrapeProduct } from './scraper.js'
-import { startScheduler, checkAllPrices } from './scheduler.js'
+import { startScheduler, stopScheduler, checkAllPrices } from './scheduler.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const { version } = packageJson
@@ -174,7 +174,41 @@ app.post('/api/check', async (req, res) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Price Tracker running at http://localhost:${PORT}`)
   startScheduler()
 })
+
+function shutdown(signal) {
+  console.log(`[Server] ${signal} received, shutting down...`)
+  server.close(async (error) => {
+    if (error) {
+      console.error('[Server] Failed to close HTTP server:', error)
+      process.exitCode = 1
+    }
+
+    let shutdownFailed = false
+    try {
+      await stopScheduler()
+    } catch (shutdownError) {
+      console.error('[Server] Error during shutdown:', shutdownError)
+      process.exitCode = 1
+      shutdownFailed = true
+    }
+
+    try {
+      closeDb()
+    } catch (closeError) {
+      console.error('[Server] Failed to close database:', closeError)
+      process.exitCode = 1
+      shutdownFailed = true
+    }
+
+    if (!shutdownFailed && !error) {
+      console.log('[Server] Shutdown complete.')
+    }
+  })
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'))
+process.on('SIGTERM', () => shutdown('SIGTERM'))

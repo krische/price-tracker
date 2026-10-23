@@ -4,11 +4,14 @@ import { scrapeProduct } from './scraper.js'
 import { sendInStockNotification, sendPriceDropNotification } from './notifications.js'
 
 const THRESHOLD = parseFloat(process.env.PRICE_DROP_THRESHOLD || '5')
+const activeChecks = new Set()
+let scheduledTask
+let startupTimeout
 
 /**
  * Check all tracked products for price changes
  */
-async function checkAllPrices() {
+async function runPriceCheck() {
   const db = getDb()
   const products = db.prepare('SELECT id, url, last_price, in_stock FROM products').all()
 
@@ -104,6 +107,16 @@ async function checkAllPrices() {
   console.log('[Scheduler] Check complete.')
 }
 
+function checkAllPrices() {
+  const check = runPriceCheck()
+  activeChecks.add(check)
+  check.then(
+    () => activeChecks.delete(check),
+    () => activeChecks.delete(check),
+  )
+  return check
+}
+
 /**
  * Start the cron job
  */
@@ -114,7 +127,7 @@ function startScheduler() {
 
   console.log(`[Scheduler] Starting price checks with cron expression: ${cronExpression}`)
 
-  cron.schedule(
+  scheduledTask = cron.schedule(
     cronExpression,
     () => {
       console.log(`[Scheduler] Running scheduled price check at ${new Date().toISOString()}`)
@@ -126,7 +139,22 @@ function startScheduler() {
   )
 
   // Run once on startup after a short delay
-  setTimeout(() => checkAllPrices(), 5000)
+  startupTimeout = setTimeout(() => checkAllPrices(), 5000)
 }
 
-export { startScheduler, checkAllPrices }
+async function stopScheduler() {
+  scheduledTask?.stop()
+  scheduledTask = undefined
+  clearTimeout(startupTimeout)
+  startupTimeout = undefined
+  const results = await Promise.allSettled(activeChecks)
+  const failures = results
+    .filter((result) => result.status === 'rejected')
+    .map((result) => result.reason)
+
+  if (failures.length > 0) {
+    throw new AggregateError(failures, 'One or more price checks failed during shutdown')
+  }
+}
+
+export { startScheduler, stopScheduler, checkAllPrices }
