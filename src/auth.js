@@ -1,4 +1,5 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
+import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { Buffer } from 'node:buffer'
 
 const SESSION_COOKIE = 'price_tracker_session'
 const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60
@@ -6,9 +7,11 @@ const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60
 function matchesCredential(actual, expected) {
   if (typeof actual !== 'string') return false
 
-  const actualHash = createHash('sha256').update(actual).digest()
-  const expectedHash = createHash('sha256').update(expected).digest()
-  return timingSafeEqual(actualHash, expectedHash) && actual === expected
+  const actualBuffer = Buffer.from(actual, 'utf8')
+  const expectedBuffer = Buffer.from(expected, 'utf8')
+  if (actualBuffer.length !== expectedBuffer.length) return false
+
+  return timingSafeEqual(actualBuffer, expectedBuffer)
 }
 
 function getSessionToken(req) {
