@@ -1,4 +1,4 @@
-FROM node:26.12.0-bookworm
+FROM node:26.12.0-trixie
 
 LABEL org.opencontainers.image.source=https://github.com/krische/price-tracker
 LABEL org.opencontainers.image.description="Price drop and stock tracker for Amazon and Best Buy — get email alerts when prices fall or items are back in stock."
@@ -14,8 +14,7 @@ RUN apt-get update \
 
 # Application
 COPY package*.json ./
-RUN npm install-scripts approve better-sqlite3 && \
-  npm ci --omit=dev --no-audit --no-fund
+RUN npm ci --omit=dev --no-audit --no-fund
 
 # Install Playwright and its dependencies
 RUN npx playwright install --with-deps chromium
