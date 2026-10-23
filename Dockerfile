@@ -1,4 +1,4 @@
-FROM node:26.12.0-trixie
+FROM node:26.12.1-trixie
 
 LABEL org.opencontainers.image.source=https://github.com/krische/price-tracker
 LABEL org.opencontainers.image.description="Price drop and stock tracker for Amazon and Best Buy — get email alerts when prices fall or items are back in stock."
