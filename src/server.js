@@ -19,7 +19,15 @@ const auth = createAuth({
   username: process.env.AUTH_USERNAME,
   password: process.env.AUTH_PASSWORD,
 })
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+	standardHeaders: 'draft-8', // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+	ipv6Subnet: 56, // Set to 60 or 64 to be less aggressive, or 52 or 48 to be more aggressive
+})
 
+app.use(limiter)
 app.use(express.json())
 app.use(express.static(path.join(__dirname, '..', 'public')))
 
@@ -148,21 +156,14 @@ app.get('/api/products/:id/screenshot', (req, res, next) => {
   }
 })
 
-const historyRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false
-})
-
 // GET price history for a product
-app.get('/api/products/:id/history', historyRateLimiter, (req, res) => {
+app.get('/api/products/:id/history', (req, res) => {
   const db = getDb()
   const { id } = req.params
 
   const history = db.prepare(`
     SELECT price, in_stock, checked_at
-    FROM price_history 
+    FROM price_history
     WHERE product_id = ?
     ORDER BY checked_at ASC
   `).all(id)
