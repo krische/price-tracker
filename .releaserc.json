@@ -6,6 +6,7 @@
       "preset": "conventionalcommits",
       "releaseRules": [
         { "type": "build", "release": "patch" },
+        { "type": "chore", "release": "patch" },
         { "type": "ci", "release": "patch" },
         { "type": "feature", "release": "minor" }
       ]
