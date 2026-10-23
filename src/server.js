@@ -1,6 +1,7 @@
 import 'dotenv/config'
 
 import express from 'express'
+import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import packageJson from '../package.json' with { type: 'json' }
 import { fileURLToPath } from 'node:url'
@@ -147,8 +148,15 @@ app.get('/api/products/:id/screenshot', (req, res, next) => {
   }
 })
 
+const historyRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false
+})
+
 // GET price history for a product
-app.get('/api/products/:id/history', (req, res) => {
+app.get('/api/products/:id/history', historyRateLimiter, (req, res) => {
   const db = getDb()
   const { id } = req.params
 
