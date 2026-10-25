@@ -181,12 +181,13 @@ async function scrapeProduct(url) {
     result.screenshot = await page.screenshot({ type: 'png' })
     return result
   } catch (error) {
+    console.error(`[Scraper] Failed to scrape ${store} product at ${url}:`, error)
     if (page) {
       try {
-        console.log(`[Scraper] Error occurred. Capturing screenshot.`)
         error.screenshot = await page.screenshot({ type: 'png' })
       } catch (screenshotError) {
         error.screenshotError = screenshotError
+        console.error(`[Scraper] Failed to capture error screenshot for ${url}:`, screenshotError)
       }
     }
     throw error
