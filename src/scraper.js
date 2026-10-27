@@ -17,6 +17,26 @@ function getBlocker() {
   return blockerPromise
 }
 
+async function gotoProductPage(page, url) {
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
+
+  try {
+    await page.waitForFunction(
+      () => Boolean(globalThis.document.body?.innerText.trim()),
+      undefined,
+      { timeout: 5000 }
+    )
+  } catch (error) {
+    if (error.name !== 'TimeoutError') throw error
+
+    const title = await page.title()
+    throw new Error(
+      `Page rendered no visible text at ${page.url()} (title: ${title || 'empty'})`,
+      { cause: error }
+    )
+  }
+}
+
 /**
  * Detect which store the URL belongs to
  */
@@ -33,7 +53,7 @@ function detectStore(url) {
  * Scrape Amazon product price and name
  */
 async function scrapeAmazon(page, url) {
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
+  await gotoProductPage(page, url)
 
   let name = 'Unknown Product'
   let price = null
@@ -86,7 +106,7 @@ async function scrapeAmazon(page, url) {
  * Scrape Best Buy product price and name
  */
 async function scrapeBestBuy(page, url) {
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
+  await gotoProductPage(page, url)
 
   await page.addStyleTag({
     content: `
