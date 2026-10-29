@@ -1,5 +1,5 @@
 import cron from 'node-cron'
-import { getDb } from './db.js'
+import { getDb, prunePriceHistory } from './db.js'
 import { scrapeProduct } from './scraper.js'
 import { sendInStockNotification, sendPriceDropNotification } from './notifications.js'
 
@@ -13,6 +13,7 @@ let startupTimeout
  */
 async function runPriceCheck() {
   const db = getDb()
+  prunePriceHistory()
   const products = db.prepare('SELECT id, url, last_price, in_stock FROM products').all()
 
   console.log(`[Scheduler] Checking ${products.length} product(s)...`)
@@ -48,7 +49,7 @@ async function runPriceCheck() {
       )
 
       // Keep availability checks in history even when no price was available.
-      db.prepare('INSERT INTO price_history (product_id, price, in_stock) VALUES (?, ?, ?)').run(
+      db.prepare('INSERT INTO price_history (product_id, price, in_stock, scrape_error) VALUES (?, ?, ?, 0)').run(
         product.id,
         newPrice,
         result.inStock ? 1 : 0
@@ -101,6 +102,11 @@ async function runPriceCheck() {
         console.error(`[Scheduler] Failed to capture error screenshot for ${product.url}:`, err.screenshotError.message)
       }
       console.error(`[Scheduler] Error checking ${product.url}:`, err.message)
+      db.prepare('UPDATE products SET last_checked = CURRENT_TIMESTAMP WHERE id = ?').run(product.id)
+      db.prepare(`
+        INSERT INTO price_history (product_id, price, in_stock, scrape_error)
+        VALUES (?, NULL, ?, 1)
+      `).run(product.id, product.in_stock)
     }
   }
 

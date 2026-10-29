@@ -12,7 +12,7 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 - **🔗 Add any Amazon or Best Buy URL** — just paste and track
 - **🕷️ Playwright scraper** — headless browser scraping for accurate prices
 - **⏰ Scheduled checks** — cron job runs every 6 hours (configurable)
-- **💾 SQLite storage** — full price history stored locally
+- **💾 SQLite storage** — the past two weeks of price history stored locally
 - **📦 Stock tracking** — current availability and availability history for each product
 - **📈 Price and availability history charts** — Chart.js graphs for each product
 - **🖼️ Latest scrape screenshot** — base64 screenshot in SQLite, viewable from each product; blank pages are reported as failed scrapes and scheduled failures save a screenshot when available

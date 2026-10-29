@@ -50,6 +50,7 @@ test('creates the database at DB_PATH and initializes the current schema', () =>
   assert.ok(productColumns.includes('last_screenshot'))
   assert.ok(productColumns.includes('in_stock'))
   assert.ok(historyColumns.includes('in_stock'))
+  assert.ok(historyColumns.includes('scrape_error'))
   db.close()
 })
 
@@ -88,10 +89,71 @@ test('migrates legacy price history while preserving existing rows', () => {
   const db = new Database(databasePath)
   const product = db.prepare('SELECT in_stock, last_screenshot FROM products WHERE id = 1').get()
   const history = db.prepare('SELECT price, in_stock FROM price_history WHERE product_id = 1').get()
+  const historyError = db.prepare('SELECT scrape_error FROM price_history WHERE product_id = 1').get()
   const historyPrice = db.pragma('table_info(price_history)').find((column) => column.name === 'price')
 
   assert.deepEqual(product, { in_stock: 1, last_screenshot: null })
   assert.deepEqual(history, { price: 12.5, in_stock: 1 })
+  assert.deepEqual(historyError, { scrape_error: 0 })
   assert.equal(historyPrice.notnull, 0)
   db.close()
+})
+
+test('adds scrape error tracking to an existing current history schema', () => {
+  const databasePath = path.join(createTemporaryDirectory(), 'current.db')
+  const database = new Database(databasePath)
+  database.exec(`
+    CREATE TABLE products (id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT UNIQUE NOT NULL);
+    CREATE TABLE price_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL,
+      price REAL,
+      in_stock INTEGER NOT NULL DEFAULT 1,
+      checked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `)
+  database.close()
+
+  initializeDatabase(databasePath)
+
+  const migratedDb = new Database(databasePath)
+  const historyColumns = migratedDb.pragma('table_info(price_history)').map((column) => column.name)
+  assert.ok(historyColumns.includes('scrape_error'))
+  migratedDb.close()
+})
+
+test('removes price history older than two weeks', () => {
+  const databasePath = path.join(createTemporaryDirectory(), 'retention.db')
+  const database = new Database(databasePath)
+  database.exec(`
+    CREATE TABLE products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT UNIQUE NOT NULL
+    );
+    CREATE TABLE price_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL,
+      price REAL,
+      in_stock INTEGER NOT NULL DEFAULT 1,
+      checked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `)
+  database.prepare('INSERT INTO products (url) VALUES (?)').run('https://example.com/product')
+  database.prepare(`
+    INSERT INTO price_history (product_id, price, checked_at)
+    VALUES (1, ?, datetime('now', '-15 days'))
+  `).run(10)
+  database.prepare(`
+    INSERT INTO price_history (product_id, price, checked_at)
+    VALUES (1, ?, datetime('now', '-13 days'))
+  `).run(12)
+  database.close()
+
+  initializeDatabase(databasePath)
+
+  const retainedDb = new Database(databasePath)
+  const retainedHistory = retainedDb.prepare('SELECT price FROM price_history ORDER BY price').all()
+  retainedDb.close()
+
+  assert.deepEqual(retainedHistory, [{ price: 12 }])
 })
