@@ -56,6 +56,7 @@ app.get('/api/products', (req, res) => {
            (p.last_screenshot IS NOT NULL) as has_screenshot,
            COUNT(ph.id) as check_count,
            COUNT(ph.price) as price_check_count,
+           SUM(ph.scrape_error) as scrape_error_count,
            MIN(ph.price) as min_price,
            MAX(ph.price) as max_price
     FROM products p
@@ -163,7 +164,7 @@ app.get('/api/products/:id/history', (req, res) => {
   const { id } = req.params
 
   const history = db.prepare(`
-    SELECT price, in_stock, checked_at
+    SELECT price, in_stock, scrape_error, checked_at
     FROM price_history
     WHERE product_id = ?
     ORDER BY checked_at ASC

@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DB_PATH = process.env.DB_PATH
   ? path.resolve(process.env.DB_PATH)
   : path.join(__dirname, '..', 'prices.db')
+const HISTORY_RETENTION_DAYS = 14
 
 let db
 
@@ -17,6 +18,7 @@ function getDb() {
     db = new Database(DB_PATH)
     db.pragma('journal_mode = WAL')
     initSchema()
+    prunePriceHistory()
   }
   return db
 }
@@ -49,6 +51,7 @@ function initSchema() {
       product_id INTEGER NOT NULL,
       price REAL,
       in_stock INTEGER NOT NULL DEFAULT 1,
+      scrape_error INTEGER NOT NULL DEFAULT 0,
       checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     );
@@ -76,16 +79,28 @@ function initSchema() {
           product_id INTEGER NOT NULL,
           price REAL,
           in_stock INTEGER NOT NULL DEFAULT 1,
+          scrape_error INTEGER NOT NULL DEFAULT 0,
           checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
         );
-        INSERT INTO price_history (id, product_id, price, in_stock, checked_at)
-        SELECT id, product_id, price, ${copyStock}, checked_at
+        INSERT INTO price_history (id, product_id, price, in_stock, scrape_error, checked_at)
+        SELECT id, product_id, price, ${copyStock}, 0, checked_at
         FROM price_history_legacy;
         DROP TABLE price_history_legacy;
       `)
     })()
   }
+
+  if (!db.pragma('table_info(price_history)').some((column) => column.name === 'scrape_error')) {
+    db.exec('ALTER TABLE price_history ADD COLUMN scrape_error INTEGER NOT NULL DEFAULT 0')
+  }
 }
 
-export { getDb, closeDb }
+function prunePriceHistory() {
+  db.prepare(`
+    DELETE FROM price_history
+    WHERE checked_at < datetime('now', '-${HISTORY_RETENTION_DAYS} days')
+  `).run()
+}
+
+export { getDb, closeDb, prunePriceHistory }

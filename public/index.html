@@ -320,6 +320,7 @@
               Last checked: ${lastChecked} &nbsp;•&nbsp; 
               Alert at ${p.alert_threshold}% drop or in stock &nbsp;•&nbsp;
               ${p.price_check_count} price data point${p.price_check_count !== 1 ? 's' : ''}
+              ${p.scrape_error_count ? ` &nbsp;•&nbsp; ${p.scrape_error_count} scrape error${p.scrape_error_count !== 1 ? 's' : ''}` : ''}
             </div>
             <div class="chart-wrapper" id="chart-wrapper-${p.id}">
               <div class="history-charts">
@@ -418,7 +419,24 @@
       const res = await apiFetch(`/api/products/${id}/history`)
       const history = await res.json()
 
-      const priceHistory = history.filter(h => h.price !== null)
+      const priceHistory = history.filter(h => h.price !== null && !h.scrape_error)
+      const availabilityHistory = history.filter(h => !h.scrape_error)
+      const historyValueAt = (entries, index, value) => {
+        for (let offset = index - 1; offset >= 0; offset--) {
+          if (!entries[offset].scrape_error && entries[offset][value] !== null) return entries[offset][value]
+        }
+        for (let offset = index + 1; offset < entries.length; offset++) {
+          if (!entries[offset].scrape_error && entries[offset][value] !== null) return entries[offset][value]
+        }
+        return 0
+      }
+      const labels = history.map(h => parseUtcTimestamp(h.checked_at).toLocaleDateString())
+      const priceErrors = history.map((h, index) => h.scrape_error
+        ? historyValueAt(history, index, 'price')
+        : null)
+      const availabilityErrors = history.map((h, index) => h.scrape_error
+        ? historyValueAt(history, index, 'in_stock')
+        : null)
       const priceCanvas = document.getElementById(`price-chart-${id}`)
       const stockCanvas = document.getElementById(`stock-chart-${id}`)
       const priceEmpty = document.getElementById(`price-empty-${id}`)
@@ -428,21 +446,31 @@
       charts[id]?.stock?.destroy()
       charts[id] = {}
 
-      priceCanvas.hidden = !priceHistory.length
-      priceEmpty.hidden = Boolean(priceHistory.length)
-      if (priceHistory.length) {
+      const hasPriceChartData = priceHistory.length || history.some(h => h.scrape_error)
+      priceCanvas.hidden = !hasPriceChartData
+      priceEmpty.hidden = Boolean(hasPriceChartData)
+      if (hasPriceChartData) {
         charts[id].price = new Chart(priceCanvas.getContext('2d'), {
           type: 'line',
           data: {
-            labels: priceHistory.map(h => parseUtcTimestamp(h.checked_at).toLocaleDateString()),
+            labels,
             datasets: [{
               label: 'Price ($)',
-              data: priceHistory.map(h => h.price),
+              data: history.map(h => h.scrape_error ? null : h.price),
               borderColor: '#3b82f6',
               backgroundColor: 'rgba(59,130,246,0.1)',
               tension: 0.3,
               fill: true,
               pointRadius: 4,
+            }, {
+              label: 'Scrape error',
+              data: priceErrors,
+              borderColor: '#dc2626',
+              backgroundColor: '#dc2626',
+              pointBackgroundColor: '#dc2626',
+              pointBorderColor: '#dc2626',
+              pointRadius: 6,
+              showLine: false,
             }],
           },
           options: {
@@ -453,21 +481,31 @@
         })
       }
 
-      stockCanvas.hidden = !history.length
-      stockEmpty.hidden = Boolean(history.length)
-      if (history.length) {
+      const hasStockChartData = availabilityHistory.length || history.some(h => h.scrape_error)
+      stockCanvas.hidden = !hasStockChartData
+      stockEmpty.hidden = Boolean(hasStockChartData)
+      if (hasStockChartData) {
         charts[id].stock = new Chart(stockCanvas.getContext('2d'), {
           type: 'line',
           data: {
-            labels: history.map(h => parseUtcTimestamp(h.checked_at).toLocaleDateString()),
+            labels,
             datasets: [{
               label: 'Availability',
-              data: history.map(h => h.in_stock ? 1 : 0),
+              data: history.map(h => h.scrape_error ? null : (h.in_stock ? 1 : 0)),
               borderColor: '#16a34a',
               backgroundColor: 'rgba(22,163,74,0.1)',
               stepped: true,
               fill: true,
               pointRadius: 4,
+            }, {
+              label: 'Scrape error',
+              data: availabilityErrors,
+              borderColor: '#dc2626',
+              backgroundColor: '#dc2626',
+              pointBackgroundColor: '#dc2626',
+              pointBorderColor: '#dc2626',
+              pointRadius: 6,
+              showLine: false,
             }],
           },
           options: {
