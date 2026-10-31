@@ -1,7 +1,7 @@
 import { chromium } from 'patchright'
 
 async function gotoProductPage(page, url) {
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
+  await page.goto(url, { waitUntil: 'load', timeout: 30000 })
 
   try {
     await page.waitForFunction(
