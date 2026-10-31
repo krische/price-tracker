@@ -505,7 +505,7 @@
         })
       }
 
-      historyTable.innerHTML = history.map(entry => `
+      historyTable.innerHTML = [...history].reverse().map(entry => `
         <tr class="${entry.scrape_error ? 'history-error' : ''}">
           <td>${parseUtcTimestamp(entry.checked_at).toLocaleString()}</td>
           <td>${entry.price === null ? '—' : `$${Number(entry.price).toFixed(2)}`}</td>
