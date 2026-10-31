@@ -12,17 +12,19 @@
       ]
     }],
     "@semantic-release/release-notes-generator",
-    ["@semantic-release/npm", {
-      "npmPublish": false
-    }],
     ["@codedependant/semantic-release-docker", {
       "dockerBuildQuiet": false,
       "dockerPlatform": ["linux/amd64", "linux/arm64/v8"],
+      "dockerArgs": {
+        "APP_VERSION": "{{version}}"
+      },
       "dockerBuildFlags": {
         "annotation": [
           "index:org.opencontainers.image.description=Price drop and stock tracker for Amazon and Best Buy — get email alerts when prices fall or items are back in stock.",
           "index:org.opencontainers.image.source=https://github.com/krische/price-tracker"
-        ]
+        ],
+        "cache-from": "type=gha",
+        "cache-to": "type=gha,mode=max"
       },
       "dockerRegistry": "ghcr.io"
     }],
