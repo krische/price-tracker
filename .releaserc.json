@@ -17,7 +17,6 @@
     }],
     ["@codedependant/semantic-release-docker", {
       "dockerBuildQuiet": false,
-      "dockerPlatform": ["linux/amd64", "linux/arm64/v8"],
       "dockerBuildFlags": {
         "annotation": [
           "index:org.opencontainers.image.description=Price drop and stock tracker for Amazon and Best Buy — get email alerts when prices fall or items are back in stock.",

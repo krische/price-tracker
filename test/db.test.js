@@ -51,6 +51,7 @@ test('creates the database at DB_PATH and initializes the current schema', () =>
   assert.ok(productColumns.includes('in_stock'))
   assert.ok(historyColumns.includes('in_stock'))
   assert.ok(historyColumns.includes('scrape_error'))
+  assert.ok(historyColumns.includes('scrape_error_message'))
   db.close()
 })
 
@@ -89,12 +90,12 @@ test('migrates legacy price history while preserving existing rows', () => {
   const db = new Database(databasePath)
   const product = db.prepare('SELECT in_stock, last_screenshot FROM products WHERE id = 1').get()
   const history = db.prepare('SELECT price, in_stock FROM price_history WHERE product_id = 1').get()
-  const historyError = db.prepare('SELECT scrape_error FROM price_history WHERE product_id = 1').get()
+  const historyError = db.prepare('SELECT scrape_error, scrape_error_message FROM price_history WHERE product_id = 1').get()
   const historyPrice = db.pragma('table_info(price_history)').find((column) => column.name === 'price')
 
   assert.deepEqual(product, { in_stock: 1, last_screenshot: null })
   assert.deepEqual(history, { price: 12.5, in_stock: 1 })
-  assert.deepEqual(historyError, { scrape_error: 0 })
+  assert.deepEqual(historyError, { scrape_error: 0, scrape_error_message: null })
   assert.equal(historyPrice.notnull, 0)
   db.close()
 })
@@ -119,6 +120,7 @@ test('adds scrape error tracking to an existing current history schema', () => {
   const migratedDb = new Database(databasePath)
   const historyColumns = migratedDb.pragma('table_info(price_history)').map((column) => column.name)
   assert.ok(historyColumns.includes('scrape_error'))
+  assert.ok(historyColumns.includes('scrape_error_message'))
   migratedDb.close()
 })
 

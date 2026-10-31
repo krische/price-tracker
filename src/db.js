@@ -52,6 +52,7 @@ function initSchema() {
       price REAL,
       in_stock INTEGER NOT NULL DEFAULT 1,
       scrape_error INTEGER NOT NULL DEFAULT 0,
+      scrape_error_message TEXT,
       checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     );
@@ -80,11 +81,12 @@ function initSchema() {
           price REAL,
           in_stock INTEGER NOT NULL DEFAULT 1,
           scrape_error INTEGER NOT NULL DEFAULT 0,
+          scrape_error_message TEXT,
           checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
         );
-        INSERT INTO price_history (id, product_id, price, in_stock, scrape_error, checked_at)
-        SELECT id, product_id, price, ${copyStock}, 0, checked_at
+        INSERT INTO price_history (id, product_id, price, in_stock, scrape_error, scrape_error_message, checked_at)
+        SELECT id, product_id, price, ${copyStock}, 0, NULL, checked_at
         FROM price_history_legacy;
         DROP TABLE price_history_legacy;
       `)
@@ -93,6 +95,9 @@ function initSchema() {
 
   if (!db.pragma('table_info(price_history)').some((column) => column.name === 'scrape_error')) {
     db.exec('ALTER TABLE price_history ADD COLUMN scrape_error INTEGER NOT NULL DEFAULT 0')
+  }
+  if (!db.pragma('table_info(price_history)').some((column) => column.name === 'scrape_error_message')) {
+    db.exec('ALTER TABLE price_history ADD COLUMN scrape_error_message TEXT')
   }
 }
 

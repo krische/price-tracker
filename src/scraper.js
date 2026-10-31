@@ -1,8 +1,5 @@
 import { PlaywrightBlocker } from '@ghostery/adblocker-playwright'
-import { chromium } from 'playwright-extra'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-
-chromium.use(StealthPlugin())
+import { chromium } from 'patchright'
 
 let blockerPromise
 
@@ -171,11 +168,12 @@ async function scrapeProduct(url) {
 
   const blocker = await getBlocker()
   const browser = await chromium.launch({
-    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
     ],
+    channel: 'chrome',
+    headless: true,
   })
 
   let page

@@ -16,8 +16,8 @@ RUN apt-get update \
 COPY package*.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 
-# Install Playwright and its dependencies
-RUN npx playwright install --with-deps chromium
+# Install Patchright and its dependencies
+RUN npx --yes patchright install --with-deps chrome
 
 # Copy application files
 COPY src ./src

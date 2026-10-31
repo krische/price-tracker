@@ -4,6 +4,7 @@ import { scrapeProduct } from './scraper.js'
 import { sendInStockNotification, sendPriceDropNotification } from './notifications.js'
 
 const THRESHOLD = parseFloat(process.env.PRICE_DROP_THRESHOLD || '5')
+const SCRAPE_ERROR_MESSAGE_LIMIT = 500
 const activeChecks = new Set()
 let scheduledTask
 let startupTimeout
@@ -104,9 +105,13 @@ async function runPriceCheck() {
       console.error(`[Scheduler] Error checking ${product.url}:`, err.message)
       db.prepare('UPDATE products SET last_checked = CURRENT_TIMESTAMP WHERE id = ?').run(product.id)
       db.prepare(`
-        INSERT INTO price_history (product_id, price, in_stock, scrape_error)
-        VALUES (?, NULL, ?, 1)
-      `).run(product.id, product.in_stock)
+        INSERT INTO price_history (product_id, price, in_stock, scrape_error, scrape_error_message)
+        VALUES (?, NULL, ?, 1, ?)
+      `).run(
+        product.id,
+        product.in_stock,
+        (err instanceof Error ? err.message : String(err)).slice(0, SCRAPE_ERROR_MESSAGE_LIMIT)
+      )
     }
   }
 

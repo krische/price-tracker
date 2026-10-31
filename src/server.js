@@ -164,7 +164,7 @@ app.get('/api/products/:id/history', (req, res) => {
   const { id } = req.params
 
   const history = db.prepare(`
-    SELECT price, in_stock, scrape_error, checked_at
+    SELECT price, in_stock, scrape_error, scrape_error_message, checked_at
     FROM price_history
     WHERE product_id = ?
     ORDER BY checked_at ASC
