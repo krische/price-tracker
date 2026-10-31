@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+.devcontainer
+.vscode
+*.db
+*.db-*
+.env*
+test
+coverage
