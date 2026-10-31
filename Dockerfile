@@ -17,7 +17,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 
 # Install Patchright and its dependencies
-RUN npx --yes patchright install --with-deps chrome
+RUN npx --yes patchright install --with-deps chromium
 
 # Copy application files
 COPY src ./src
