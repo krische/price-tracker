@@ -156,8 +156,9 @@ async function scrapeProduct(url) {
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
+      '--window-position=-2400,-2400',
     ],
-    headless: true,
+    headless: process.env.HEADLESS === 'true',
   })
 
   let page
