@@ -116,10 +116,15 @@
     .product-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
     .chart-wrapper { margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 16px; display: none; }
-    .history-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
     .history-chart h4 { font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; color: #334155; }
     .history-chart canvas { max-height: 200px; }
     .history-empty { color: #94a3b8; font-size: 0.875rem; padding: 16px 0; }
+    .history-table-wrapper { margin-top: 20px; overflow-x: auto; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+    .history-table th, .history-table td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; white-space: nowrap; }
+    .history-table th { color: #475569; font-weight: 600; }
+    .history-table td:last-child { white-space: normal; min-width: 220px; color: #dc2626; }
+    .history-table .history-error { background: #fff7f7; }
     .screenshot-wrapper { margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 16px; display: none; }
     .screenshot-image { display: block; max-width: 100%; max-height: 80vh; height: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
     .screenshot-error { color: #dc2626; font-size: 0.875rem; }
@@ -271,6 +276,15 @@
       return new Date(hasTimezone ? isoTimestamp : `${isoTimestamp}Z`)
     }
 
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;')
+    }
+
     function renderProducts(products) {
       const container = document.getElementById('productsList')
 
@@ -323,17 +337,18 @@
               ${p.scrape_error_count ? ` &nbsp;•&nbsp; ${p.scrape_error_count} scrape error${p.scrape_error_count !== 1 ? 's' : ''}` : ''}
             </div>
             <div class="chart-wrapper" id="chart-wrapper-${p.id}">
-              <div class="history-charts">
-                <section class="history-chart">
-                  <h4>Price history</h4>
-                  <p class="history-empty" id="price-empty-${p.id}" hidden>No price history yet.</p>
-                  <canvas id="price-chart-${p.id}"></canvas>
-                </section>
-                <section class="history-chart">
-                  <h4>Availability history</h4>
-                  <p class="history-empty" id="stock-empty-${p.id}" hidden>No availability history yet.</p>
-                  <canvas id="stock-chart-${p.id}"></canvas>
-                </section>
+              <section class="history-chart">
+                <h4>Price history</h4>
+                <p class="history-empty" id="price-empty-${p.id}" hidden>No price history yet.</p>
+                <canvas id="price-chart-${p.id}"></canvas>
+              </section>
+              <div class="history-table-wrapper">
+                <table class="history-table">
+                  <thead>
+                    <tr><th>Scraped</th><th>Price</th><th>Availability</th><th>Error</th></tr>
+                  </thead>
+                  <tbody id="history-table-${p.id}"></tbody>
+                </table>
               </div>
             </div>
             <div class="screenshot-wrapper" id="screenshot-wrapper-${p.id}">
@@ -420,7 +435,6 @@
       const history = await res.json()
 
       const priceHistory = history.filter(h => h.price !== null && !h.scrape_error)
-      const availabilityHistory = history.filter(h => !h.scrape_error)
       const historyValueAt = (entries, index, value) => {
         for (let offset = index - 1; offset >= 0; offset--) {
           if (!entries[offset].scrape_error && entries[offset][value] !== null) return entries[offset][value]
@@ -434,16 +448,17 @@
       const priceErrors = history.map((h, index) => h.scrape_error
         ? historyValueAt(history, index, 'price')
         : null)
-      const availabilityErrors = history.map((h, index) => h.scrape_error
-        ? historyValueAt(history, index, 'in_stock')
-        : null)
+      const errorTooltip = (context) => {
+        const entry = history[context.dataIndex]
+        return entry.scrape_error_message
+          ? `Scrape error: ${entry.scrape_error_message}`
+          : 'Scrape error'
+      }
       const priceCanvas = document.getElementById(`price-chart-${id}`)
-      const stockCanvas = document.getElementById(`stock-chart-${id}`)
       const priceEmpty = document.getElementById(`price-empty-${id}`)
-      const stockEmpty = document.getElementById(`stock-empty-${id}`)
+      const historyTable = document.getElementById(`history-table-${id}`)
 
       charts[id]?.price?.destroy()
-      charts[id]?.stock?.destroy()
       charts[id] = {}
 
       const hasPriceChartData = priceHistory.length || history.some(h => h.scrape_error)
@@ -475,62 +490,29 @@
           },
           options: {
             responsive: true,
-            plugins: { legend: { display: false } },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: context => context.dataset.label === 'Scrape error'
+                    ? errorTooltip(context)
+                    : `Price: $${Number(context.parsed.y).toFixed(2)}`,
+                },
+              },
+            },
             scales: { y: { beginAtZero: false } },
           },
         })
       }
 
-      const hasStockChartData = availabilityHistory.length || history.some(h => h.scrape_error)
-      stockCanvas.hidden = !hasStockChartData
-      stockEmpty.hidden = Boolean(hasStockChartData)
-      if (hasStockChartData) {
-        charts[id].stock = new Chart(stockCanvas.getContext('2d'), {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Availability',
-              data: history.map(h => h.scrape_error ? null : (h.in_stock ? 1 : 0)),
-              borderColor: '#16a34a',
-              backgroundColor: 'rgba(22,163,74,0.1)',
-              stepped: true,
-              fill: true,
-              pointRadius: 4,
-            }, {
-              label: 'Scrape error',
-              data: availabilityErrors,
-              borderColor: '#dc2626',
-              backgroundColor: '#dc2626',
-              pointBackgroundColor: '#dc2626',
-              pointBorderColor: '#dc2626',
-              pointRadius: 6,
-              showLine: false,
-            }],
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: context => Number(context.parsed.y) === 1 ? 'In stock' : 'Out of stock',
-                },
-              },
-            },
-            scales: {
-              y: {
-                min: 0,
-                max: 1,
-                ticks: {
-                  stepSize: 1,
-                  callback: value => Number(value) === 1 ? 'In stock' : 'Out of stock',
-                },
-              },
-            },
-          },
-        })
-      }
+      historyTable.innerHTML = history.map(entry => `
+        <tr class="${entry.scrape_error ? 'history-error' : ''}">
+          <td>${parseUtcTimestamp(entry.checked_at).toLocaleString()}</td>
+          <td>${entry.price === null ? '—' : `$${Number(entry.price).toFixed(2)}`}</td>
+          <td>${entry.in_stock ? 'In stock' : 'Out of stock'}</td>
+          <td>${entry.scrape_error_message ? escapeHtml(entry.scrape_error_message) : '—'}</td>
+        </tr>
+      `).join('')
     }
 
     async function triggerCheck() {

@@ -1,24 +1,7 @@
-import { PlaywrightBlocker } from '@ghostery/adblocker-playwright'
-import { chromium } from 'playwright-extra'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-
-chromium.use(StealthPlugin())
-
-let blockerPromise
-
-function getBlocker() {
-  if (!blockerPromise) {
-    blockerPromise = PlaywrightBlocker.fromPrebuiltAdsAndTracking(fetch).catch((error) => {
-      blockerPromise = undefined
-      throw error
-    })
-  }
-
-  return blockerPromise
-}
+import { chromium } from 'patchright'
 
 async function gotoProductPage(page, url) {
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 })
+  await page.goto(url, { waitUntil: 'load', timeout: 30000 })
 
   try {
     await page.waitForFunction(
@@ -169,27 +152,21 @@ async function scrapeProduct(url) {
     throw new Error('Only Amazon and Best Buy URLs are supported')
   }
 
-  const blocker = await getBlocker()
   const browser = await chromium.launch({
-    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
+      '--window-position=-2400,-2400',
     ],
+    headless: process.env.HEADLESS === 'true',
   })
 
   let page
   try {
     const context = await browser.newContext({
-      extraHTTPHeaders: {
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
       viewport: { width: 1920, height: 1200 },
     })
     page = await context.newPage()
-    await blocker.enableBlockingInPage(page)
 
     let result
     if (store === 'amazon') {

@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 sudo apt update
-npx --yes playwright install --with-deps chromium
+npx --yes patchright install --with-deps chrome

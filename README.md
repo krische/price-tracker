@@ -5,7 +5,7 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 ![Node.js](https://img.shields.io/badge/Node.js-22+-green?logo=node.js)
 ![Express](https://img.shields.io/badge/Express-5.x-lightgrey?logo=express)
 ![SQLite](https://img.shields.io/badge/SQLite-3-blue?logo=sqlite)
-![Playwright](https://img.shields.io/badge/Playwright-1.x-red?logo=playwright)
+![Patchright](https://img.shields.io/badge/Patchright-1.x-red)
 
 ## ✨ Features
 
@@ -15,6 +15,7 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 - **💾 SQLite storage** — the past two weeks of price history stored locally
 - **📦 Stock tracking** — current availability and availability history for each product
 - **📈 Price and availability history charts** — Chart.js graphs for each product
+- **⚠️ Scrape error history** — failed checks retain a truncated error message for troubleshooting
 - **🖼️ Latest scrape screenshot** — base64 screenshot in SQLite, viewable from each product; blank pages are reported as failed scrapes and scheduled failures save a screenshot when available
 - **📧 Optional email alerts** — Nodemailer alerts with the latest product screenshot embedded when prices drop by X% or products come back in stock
 - **📱 Optional Pushover alerts** — notifications for price drops and restocked products
@@ -25,7 +26,7 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 | Component                      | Technology                     |
 |--------------------------------|--------------------------------|
 | Backend                        | Node.js + Express              |
-| Scraping                       | Playwright (headless Chromium) |
+| Scraping                       | Patchright (headless Chromium) |
 | Database                       | SQLite (better-sqlite3)        |
 | Email notifications (optional) | Nodemailer                     |
 | Push notifications (optional)  | Pushover API                   |
@@ -75,7 +76,7 @@ cd price-tracker
 npm install
 
 # Install Playwright browser
-npx playwright install chromium
+npx patchright install chromium
 
 # Set up environment variables
 cp .env.example .env
@@ -166,7 +167,7 @@ price-tracker/
 | GET | `/api/products` | List tracked products, including current stock status |
 | POST | `/api/products` | Add a new product URL |
 | DELETE | `/api/products/:id` | Remove a product |
-| GET | `/api/products/:id/history` | Get price and stock history |
+| GET | `/api/products/:id/history` | Get price, stock, and scrape error history |
 | GET | `/api/products/:id/screenshot` | Get the latest screenshot captured for a product |
 | POST | `/api/check` | Manually trigger price check |
 
