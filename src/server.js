@@ -11,7 +11,7 @@ import { scrapeProduct } from './scraper.js'
 import { startScheduler, stopScheduler, checkAllPrices } from './scheduler.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const { version } = packageJson
+const version = process.env.APP_VERSION || packageJson.version
 
 const app = express()
 const PORT = process.env.PORT || 3000
