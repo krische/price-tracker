@@ -20,6 +20,7 @@ WORKDIR /app
 
 ENV PORT=3000
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV HEADLESS=false
 
 # Install system utilities and Patchright Chromium early to ensure layer caching
 RUN apt-get update \
