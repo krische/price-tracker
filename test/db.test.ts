@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const temporaryDirectories = []
+const temporaryDirectories: string[] = []
 
 after(() => {
   for (const directory of temporaryDirectories) {
@@ -17,17 +17,16 @@ after(() => {
   }
 })
 
-function createTemporaryDirectory() {
+function createTemporaryDirectory(): string {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'price-tracker-test-'))
   temporaryDirectories.push(directory)
   return directory
 }
 
-function initializeDatabase(databasePath) {
-  const result = spawnSync(process.execPath, [
-    '--input-type=module',
-    '-e',
-    "import('./src/db.js').then(({ getDb }) => getDb().close())",
+function initializeDatabase(databasePath: string): void {
+  const result = spawnSync('node_modules/.bin/tsx', [
+    '--eval',
+    "import('./src/db.ts').then(({ getDb }) => getDb().close())",
   ], {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, DB_PATH: databasePath },
@@ -44,8 +43,8 @@ test('creates the database at DB_PATH and initializes the current schema', () =>
 
   assert.ok(fs.existsSync(databasePath))
   const db = new Database(databasePath)
-  const productColumns = db.pragma('table_info(products)').map((column) => column.name)
-  const historyColumns = db.pragma('table_info(price_history)').map((column) => column.name)
+  const productColumns = (db.pragma('table_info(products)') as Array<{ name: string }>).map((column) => column.name)
+  const historyColumns = (db.pragma('table_info(price_history)') as Array<{ name: string }>).map((column) => column.name)
 
   assert.ok(productColumns.includes('last_screenshot'))
   assert.ok(productColumns.includes('in_stock'))
@@ -91,12 +90,12 @@ test('migrates legacy price history while preserving existing rows', () => {
   const product = db.prepare('SELECT in_stock, last_screenshot FROM products WHERE id = 1').get()
   const history = db.prepare('SELECT price, in_stock FROM price_history WHERE product_id = 1').get()
   const historyError = db.prepare('SELECT scrape_error, scrape_error_message FROM price_history WHERE product_id = 1').get()
-  const historyPrice = db.pragma('table_info(price_history)').find((column) => column.name === 'price')
+  const historyPrice = (db.pragma('table_info(price_history)') as Array<{ name: string; notnull: number }>).find((column) => column.name === 'price')
 
   assert.deepEqual(product, { in_stock: 1, last_screenshot: null })
   assert.deepEqual(history, { price: 12.5, in_stock: 1 })
   assert.deepEqual(historyError, { scrape_error: 0, scrape_error_message: null })
-  assert.equal(historyPrice.notnull, 0)
+  assert.equal(historyPrice!.notnull, 0)
   db.close()
 })
 
@@ -118,7 +117,7 @@ test('adds scrape error tracking to an existing current history schema', () => {
   initializeDatabase(databasePath)
 
   const migratedDb = new Database(databasePath)
-  const historyColumns = migratedDb.pragma('table_info(price_history)').map((column) => column.name)
+  const historyColumns = (migratedDb.pragma('table_info(price_history)') as Array<{ name: string }>).map((column) => column.name)
   assert.ok(historyColumns.includes('scrape_error'))
   assert.ok(historyColumns.includes('scrape_error_message'))
   migratedDb.close()
@@ -131,7 +130,7 @@ test('adds scrape error tracking to an existing current history schema', () => {
  * pruning logic directly without going through initializeDatabase (which only
  * calls prunePriceHistory on first open).
  */
-function createPruningTestDb(databasePath) {
+function createPruningTestDb(databasePath: string): Database.Database {
   const database = new Database(databasePath)
   database.exec(`
     CREATE TABLE products (
@@ -153,11 +152,10 @@ function createPruningTestDb(databasePath) {
   return database
 }
 
-function runPruning(databasePath) {
-  const result = spawnSync(process.execPath, [
-    '--input-type=module',
-    '-e',
-    "import('./src/db.js').then(({ getDb, prunePriceHistory }) => { getDb(); prunePriceHistory(); }).then(() => process.exit(0))",
+function runPruning(databasePath: string): void {
+  const result = spawnSync('node_modules/.bin/tsx', [
+    '--eval',
+    "import('./src/db.ts').then(({ getDb, prunePriceHistory }) => { getDb(); prunePriceHistory(); }).then(() => process.exit(0))",
   ], {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, DB_PATH: databasePath },
@@ -182,7 +180,7 @@ test('keeps all rows from the last 24 hours (full resolution tier)', () => {
   runPruning(databasePath)
 
   const db = new Database(databasePath)
-  const count = db.prepare('SELECT COUNT(*) as n FROM price_history').get().n
+  const count = (db.prepare('SELECT COUNT(*) as n FROM price_history').get() as { n: number }).n
   db.close()
 
   assert.equal(count, 5)
@@ -210,7 +208,7 @@ test('thins redundant rows in the 1–7 day window to one per hour', () => {
   runPruning(databasePath)
 
   const db = new Database(databasePath)
-  const rows = db.prepare('SELECT price FROM price_history ORDER BY id').all()
+  const rows = db.prepare('SELECT price FROM price_history ORDER BY id').all() as Array<{ price: number }>
   db.close()
 
   // 1 representative of the $10 cluster + 1 for the $9 price change
@@ -240,7 +238,7 @@ test('thins redundant rows in the 7–30 day window to one per day', () => {
   runPruning(databasePath)
 
   const db = new Database(databasePath)
-  const rows = db.prepare('SELECT price FROM price_history ORDER BY id').all()
+  const rows = db.prepare('SELECT price FROM price_history ORDER BY id').all() as Array<{ price: number }>
   db.close()
 
   assert.equal(rows.length, 2)
@@ -274,7 +272,7 @@ test('drops redundant rows older than 30 days but retains change events', () => 
   runPruning(databasePath)
 
   const db = new Database(databasePath)
-  const rows = db.prepare('SELECT price, scrape_error FROM price_history ORDER BY id').all()
+  const rows = db.prepare('SELECT price, scrape_error FROM price_history ORDER BY id').all() as Array<{ price: number | null; scrape_error: number }>
   db.close()
 
   // $50 cluster collapses to 1, $45 cluster collapses to 1, scrape error kept
@@ -301,7 +299,7 @@ test('always retains scrape error rows regardless of age', () => {
   runPruning(databasePath)
 
   const db = new Database(databasePath)
-  const count = db.prepare('SELECT COUNT(*) as n FROM price_history WHERE scrape_error = 1').get().n
+  const count = (db.prepare('SELECT COUNT(*) as n FROM price_history WHERE scrape_error = 1').get() as { n: number }).n
   db.close()
 
   assert.equal(count, ages.length)
@@ -326,7 +324,7 @@ test('retains availability-change rows even within the same time bucket', () => 
   runPruning(databasePath)
 
   const db = new Database(databasePath)
-  const rows = db.prepare('SELECT in_stock FROM price_history ORDER BY id').all()
+  const rows = db.prepare('SELECT in_stock FROM price_history ORDER BY id').all() as Array<{ in_stock: number }>
   db.close()
 
   // Both rows have different in_stock values, so both survive

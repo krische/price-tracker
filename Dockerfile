@@ -8,7 +8,12 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
+
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build \
+	&& npm prune --omit=dev
 
 # Stage 2: Final runtime image
 FROM node:26.13.0-trixie
@@ -38,8 +43,8 @@ COPY package.json ./
 # Copy static frontend assets
 COPY public ./public
 
-# Copy application source code (changes most frequently, near the bottom)
-COPY src ./src
+# Copy compiled application code (changes most frequently, near the bottom)
+COPY --from=builder /app/dist ./dist
 
 # Application version passed during build (does not bust dependency layers)
 ARG APP_VERSION
@@ -48,4 +53,4 @@ ENV APP_VERSION=${APP_VERSION}
 EXPOSE 3000
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["node", "src/server.js"]
+CMD ["node", "dist/src/server.js"]

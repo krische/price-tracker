@@ -1,21 +1,31 @@
 import cron from 'node-cron'
+import type { ScheduledTask } from 'node-cron'
 import { getDb, prunePriceHistory } from './db.js'
 import { scrapeProduct } from './scraper.js'
 import { sendInStockNotification, sendPriceDropNotification } from './notifications.js'
 
-const THRESHOLD = parseFloat(process.env.PRICE_DROP_THRESHOLD || '5')
+const THRESHOLD = parseFloat(process.env['PRICE_DROP_THRESHOLD'] || '5')
 const SCRAPE_ERROR_MESSAGE_LIMIT = 500
-const activeChecks = new Set()
-let scheduledTask
-let startupTimeout
+const activeChecks: Set<Promise<void>> = new Set()
+let scheduledTask: ScheduledTask | undefined
+let startupTimeout: ReturnType<typeof setTimeout> | undefined
+
+interface TrackedProduct {
+  id: number
+  url: string
+  last_price: number | null
+  in_stock: number
+}
+
+type ScraperError = Error & { screenshot?: Buffer; screenshotError?: Error }
 
 /**
  * Check all tracked products for price changes
  */
-async function runPriceCheck() {
+async function runPriceCheck(): Promise<void> {
   const db = getDb()
   prunePriceHistory()
-  const products = db.prepare('SELECT id, url, last_price, in_stock FROM products').all()
+  const products = db.prepare('SELECT id, url, last_price, in_stock FROM products').all() as TrackedProduct[]
 
   console.log(`[Scheduler] Checking ${products.length} product(s)...`)
 
@@ -88,21 +98,22 @@ async function runPriceCheck() {
       // Small delay between scrapes
       await new Promise(r => setTimeout(r, 2000))
     } catch (err) {
-      if (err.screenshot) {
+      const scraperErr = err as ScraperError
+      if (scraperErr.screenshot) {
         try {
           db.prepare(`
             UPDATE products
             SET last_screenshot = ?, last_checked = CURRENT_TIMESTAMP
             WHERE id = ?
-          `).run(err.screenshot.toString('base64'), product.id)
+          `).run(scraperErr.screenshot.toString('base64'), product.id)
         } catch (saveError) {
-          console.error(`[Scheduler] Failed to save error screenshot for ${product.url}:`, saveError.message)
+          console.error(`[Scheduler] Failed to save error screenshot for ${product.url}:`, (saveError as Error).message)
         }
       }
-      if (err.screenshotError) {
-        console.error(`[Scheduler] Failed to capture error screenshot for ${product.url}:`, err.screenshotError.message)
+      if (scraperErr.screenshotError) {
+        console.error(`[Scheduler] Failed to capture error screenshot for ${product.url}:`, scraperErr.screenshotError.message)
       }
-      console.error(`[Scheduler] Error checking ${product.url}:`, err.message)
+      console.error(`[Scheduler] Error checking ${product.url}:`, scraperErr.message)
       db.prepare('UPDATE products SET last_checked = CURRENT_TIMESTAMP WHERE id = ?').run(product.id)
       db.prepare(`
         INSERT INTO price_history (product_id, price, in_stock, scrape_error, scrape_error_message)
@@ -118,7 +129,7 @@ async function runPriceCheck() {
   console.log('[Scheduler] Check complete.')
 }
 
-function checkAllPrices() {
+function checkAllPrices(): Promise<void> {
   const check = runPriceCheck()
   activeChecks.add(check)
   check.then(
@@ -131,9 +142,9 @@ function checkAllPrices() {
 /**
  * Start the cron job
  */
-function startScheduler() {
-  const cronExpression = (process.env.CHECK_INTERVAL_EXPRESSION || '').trim() || '0 */6 * * *'
-  const configuredIntervalJitter = parseInt(process.env.CHECK_INTERVAL_JITTER || '0')
+function startScheduler(): void {
+  const cronExpression = (process.env['CHECK_INTERVAL_EXPRESSION'] || '').trim() || '0 */6 * * *'
+  const configuredIntervalJitter = parseInt(process.env['CHECK_INTERVAL_JITTER'] || '0')
   const intervalJitter = Number.isNaN(configuredIntervalJitter) || configuredIntervalJitter < 0 ? 0 : configuredIntervalJitter
 
   console.log(`[Scheduler] Starting price checks with cron expression: ${cronExpression}`)
@@ -153,7 +164,7 @@ function startScheduler() {
   startupTimeout = setTimeout(() => checkAllPrices(), 5000)
 }
 
-async function stopScheduler() {
+async function stopScheduler(): Promise<void> {
   scheduledTask?.stop()
   scheduledTask = undefined
   clearTimeout(startupTimeout)
@@ -161,7 +172,7 @@ async function stopScheduler() {
   const results = await Promise.allSettled(activeChecks)
   const failures = results
     .filter((result) => result.status === 'rejected')
-    .map((result) => result.reason)
+    .map((result) => (result as PromiseRejectedResult).reason)
 
   if (failures.length > 0) {
     throw new AggregateError(failures, 'One or more price checks failed during shutdown')

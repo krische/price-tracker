@@ -5,9 +5,10 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const DB_PATH = process.env.DB_PATH
-  ? path.resolve(process.env.DB_PATH)
+const DB_PATH = process.env['DB_PATH']
+  ? path.resolve(process.env['DB_PATH'])
   : path.join(__dirname, '..', 'prices.db')
+
 /**
  * Progressive history pruning tiers.
  *
@@ -20,15 +21,21 @@ const DB_PATH = process.env.DB_PATH
  *   7 – 30 days : keep at most one row per day
  *  30+    days  : drop all redundant rows
  */
-const PRUNE_TIERS = [
+interface PruneTier {
+  minDays: number
+  maxDays?: number
+  granularity: 'hour' | 'day' | null
+}
+
+const PRUNE_TIERS: PruneTier[] = [
   { minDays: 1, maxDays: 7,  granularity: 'hour' },
   { minDays: 7, maxDays: 30, granularity: 'day'  },
   { minDays: 30,             granularity: null    }, // drop all redundant rows
 ]
 
-let db
+let db: Database.Database | undefined
 
-function getDb() {
+function getDb(): Database.Database {
   if (!db) {
     fs.mkdirSync(path.dirname(DB_PATH), { recursive: true })
     db = new Database(DB_PATH)
@@ -39,15 +46,15 @@ function getDb() {
   return db
 }
 
-function closeDb() {
+function closeDb(): void {
   if (db) {
     db.close()
     db = undefined
   }
 }
 
-function initSchema() {
-  db.exec(`
+function initSchema(): void {
+  db!.exec(`
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       url TEXT UNIQUE NOT NULL,
@@ -74,22 +81,22 @@ function initSchema() {
     );
   `)
 
-  const productColumns = db.pragma('table_info(products)')
+  const productColumns = db!.pragma('table_info(products)') as Array<{ name: string }>
   if (!productColumns.some((column) => column.name === 'in_stock')) {
-    db.exec('ALTER TABLE products ADD COLUMN in_stock INTEGER NOT NULL DEFAULT 1')
+    db!.exec('ALTER TABLE products ADD COLUMN in_stock INTEGER NOT NULL DEFAULT 1')
   }
   if (!productColumns.some((column) => column.name === 'last_screenshot')) {
-    db.exec('ALTER TABLE products ADD COLUMN last_screenshot TEXT')
+    db!.exec('ALTER TABLE products ADD COLUMN last_screenshot TEXT')
   }
 
-  const historyColumns = db.pragma('table_info(price_history)')
+  const historyColumns = db!.pragma('table_info(price_history)') as Array<{ name: string; notnull: number }>
   const historyPrice = historyColumns.find((column) => column.name === 'price')
   const hasHistoryStock = historyColumns.some((column) => column.name === 'in_stock')
 
-  if (historyPrice.notnull || !hasHistoryStock) {
+  if (historyPrice?.notnull || !hasHistoryStock) {
     const copyStock = hasHistoryStock ? 'COALESCE(in_stock, 1)' : '1'
-    db.transaction(() => {
-      db.exec(`
+    db!.transaction(() => {
+      db!.exec(`
         ALTER TABLE price_history RENAME TO price_history_legacy;
         CREATE TABLE price_history (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,11 +116,11 @@ function initSchema() {
     })()
   }
 
-  if (!db.pragma('table_info(price_history)').some((column) => column.name === 'scrape_error')) {
-    db.exec('ALTER TABLE price_history ADD COLUMN scrape_error INTEGER NOT NULL DEFAULT 0')
+  if (!(db!.pragma('table_info(price_history)') as Array<{ name: string }>).some((column) => column.name === 'scrape_error')) {
+    db!.exec('ALTER TABLE price_history ADD COLUMN scrape_error INTEGER NOT NULL DEFAULT 0')
   }
-  if (!db.pragma('table_info(price_history)').some((column) => column.name === 'scrape_error_message')) {
-    db.exec('ALTER TABLE price_history ADD COLUMN scrape_error_message TEXT')
+  if (!(db!.pragma('table_info(price_history)') as Array<{ name: string }>).some((column) => column.name === 'scrape_error_message')) {
+    db!.exec('ALTER TABLE price_history ADD COLUMN scrape_error_message TEXT')
   }
 }
 
@@ -128,8 +135,8 @@ function initSchema() {
  *
  * All other rows are thinned out per the PRUNE_TIERS defined above.
  */
-function prunePriceHistory() {
-  db.transaction(() => {
+function prunePriceHistory(): void {
+  db!.transaction(() => {
     for (const tier of PRUNE_TIERS) {
       const olderThan = `datetime('now', '-${tier.minDays} days')`
       const newerThan = tier.maxDays !== undefined
@@ -143,7 +150,7 @@ function prunePriceHistory() {
 
       if (tier.granularity === null) {
         // Drop all redundant rows beyond the maximum age
-        db.prepare(`
+        db!.prepare(`
           DELETE FROM price_history
           WHERE ${ageCondition}
             AND scrape_error = 0
@@ -164,7 +171,7 @@ function prunePriceHistory() {
           ? `strftime('%Y-%m-%d %H', checked_at)`
           : `strftime('%Y-%m-%d',    checked_at)`
 
-        db.prepare(`
+        db!.prepare(`
           DELETE FROM price_history
           WHERE ${ageCondition}
             AND scrape_error = 0
