@@ -101,14 +101,17 @@ async function scrapeBestBuy(page, url) {
     `,
   })
 
-  // Wait for the WarrantySelector component to appear, which signals that the
-  // dynamic product components (including AddToCart) have fully hydrated.
+  // Wait for the dynamic product components to appear, which signals that
+  // components including AddToCart have fully hydrated.
   // Fall back gracefully if it never appears (e.g. certain product types).
   try {
-    await page.waitForSelector('[data-component-name="WarrantySelector"]', { timeout: 10000 })
+    await Promise.all([
+      page.waitForSelector('[data-component-name="WarrantySelector"]', { timeout: 10000 }),
+      page.waitForSelector('[data-component-name="PriceOfferContainer"]', { timeout: 10000 }),
+    ])
   } catch (error) {
     if (error.name !== 'TimeoutError') throw error
-    console.warn('[Scraper] WarrantySelector did not appear for %s — proceeding anyway', url)
+    console.warn('[Scraper] Product components did not appear for %s — proceeding anyway', url)
   }
 
   let name = 'Unknown Product'
