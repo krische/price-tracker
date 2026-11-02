@@ -30,7 +30,7 @@ const limiter = rateLimit({
 
 app.use(limiter)
 app.use(express.json())
-app.use(express.static(path.join(__dirname, '..', 'public')))
+app.use(express.static(path.join(process.cwd(), 'public')))
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 
