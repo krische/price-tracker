@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import type { TestContext } from 'node:test'
 import { sendInStockNotification, sendPriceDropNotification } from '../src/notifications.js'
 
-const notificationVariables = ['ALERT_EMAIL', 'EMAIL_USER', 'EMAIL_PASS', 'PUSHOVER_API_TOKEN', 'PUSHOVER_USER_KEY']
+const notificationVariables = ['ALERT_EMAIL', 'EMAIL_USER', 'EMAIL_PASS', 'PUSHOVER_API_TOKEN', 'PUSHOVER_USER_KEY'] as const
+type NotificationVar = typeof notificationVariables[number]
 
-function setNotificationEnvironment(t, values) {
-  const previous = Object.fromEntries(notificationVariables.map((key) => [key, process.env[key]]))
+function setNotificationEnvironment(t: TestContext, values: Partial<Record<NotificationVar, string>>): void {
+  const previous = Object.fromEntries(notificationVariables.map((key) => [key, process.env[key]])) as Record<NotificationVar, string | undefined>
 
   for (const key of notificationVariables) {
     if (values[key] === undefined) {
@@ -26,9 +28,9 @@ function setNotificationEnvironment(t, values) {
   })
 }
 
-function mockPushover(t, response = { status: 1 }) {
-  let request
-  t.mock.method(globalThis, 'fetch', async (url, options) => {
+function mockPushover(t: TestContext, response = { status: 1 }): () => { url: string; options: RequestInit } | undefined {
+  let request: { url: string; options: RequestInit } | undefined
+  t.mock.method(globalThis, 'fetch', async (url: string, options: RequestInit) => {
     request = { url, options }
     return {
       ok: true,
@@ -58,11 +60,11 @@ test('sends price-drop alerts to Pushover without requiring email configuration'
   })
 
   assert.equal(sent, true)
-  const { url, options } = getRequest()
+  const { url, options } = getRequest()!
   assert.equal(url, 'https://api.pushover.net/1/messages.json')
   assert.equal(options.method, 'POST')
-  assert.equal(options.headers['Content-Type'], 'application/x-www-form-urlencoded')
-  assert.deepEqual(Object.fromEntries(new URLSearchParams(options.body)), {
+  assert.equal((options.headers as Record<string, string>)['Content-Type'], 'application/x-www-form-urlencoded')
+  assert.deepEqual(Object.fromEntries(new URLSearchParams(options.body as string)), {
     token: 'app-token',
     user: 'user-key',
     title: 'Price Drop: Example product',
@@ -89,7 +91,7 @@ test('sends back-in-stock alerts to Pushover', async (t) => {
   })
 
   assert.equal(sent, true)
-  const body = new URLSearchParams(getRequest().options.body)
+  const body = new URLSearchParams(getRequest()!.options.body as string)
   assert.equal(body.get('title'), 'Back in Stock: Example product')
   assert.equal(body.get('message'), 'Example product at Example Store is now available.')
   assert.equal(body.get('url'), 'https://example.com/product')
@@ -117,7 +119,7 @@ test('reports Pushover API failures without rejecting the alert', async (t) => {
     PUSHOVER_API_TOKEN: 'app-token',
     PUSHOVER_USER_KEY: 'user-key',
   })
-  mockPushover(t, { status: 0, errors: ['invalid token'] })
+  mockPushover(t, { status: 0, errors: ['invalid token'] } as unknown as { status: number })
   t.mock.method(console, 'error', () => {})
 
   const sent = await sendPriceDropNotification({

@@ -11,14 +11,14 @@ import { scrapeProduct } from './scraper.js'
 import { startScheduler, stopScheduler, checkAllPrices } from './scheduler.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const version = process.env.APP_VERSION || packageJson.version
+const version = process.env['APP_VERSION'] || packageJson.version
 
 const app = express()
-const PORT = process.env.PORT || 3000
+const PORT = process.env['PORT'] || 3000
 app.set('trust proxy', 1)
 const auth = createAuth({
-  username: process.env.AUTH_USERNAME,
-  password: process.env.AUTH_PASSWORD,
+  username: process.env['AUTH_USERNAME'] ?? '',
+  password: process.env['AUTH_PASSWORD'] ?? '',
 })
 const limiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutes
@@ -69,7 +69,7 @@ app.get('/api/products', (req, res) => {
 
 // POST add a new product
 app.post('/api/products', async (req, res) => {
-  const { url, alertThreshold } = req.body
+  const { url, alertThreshold } = req.body as { url?: string; alertThreshold?: number }
 
   if (!url) {
     return res.status(400).json({ error: 'URL is required' })
@@ -99,7 +99,7 @@ app.post('/api/products', async (req, res) => {
         result.store,
         result.price,
         result.price,
-        alertThreshold || parseFloat(process.env.PRICE_DROP_THRESHOLD || '5'),
+        alertThreshold || parseFloat(process.env['PRICE_DROP_THRESHOLD'] || '5'),
         result.inStock ? 1 : 0,
         result.screenshot.toString('base64')
       )
@@ -120,7 +120,7 @@ app.post('/api/products', async (req, res) => {
     res.status(201).json(product)
   } catch (err) {
     console.error('Add product error:', err)
-    res.status(500).json({ error: err.message || 'Failed to add product' })
+    res.status(500).json({ error: (err as Error).message || 'Failed to add product' })
   }
 })
 
@@ -141,7 +141,7 @@ app.get('/api/products/:id/screenshot', (req, res, next) => {
   const db = getDb()
   const { id } = req.params
 
-  const product = db.prepare('SELECT last_screenshot FROM products WHERE id = ?').get(id)
+  const product = db.prepare('SELECT last_screenshot FROM products WHERE id = ?').get(id) as { last_screenshot: string | null } | undefined
   if (!product) return res.status(404).json({ error: 'Product not found' })
 
   if (!product.last_screenshot) {
@@ -179,7 +179,7 @@ app.post('/api/check', async (req, res) => {
     res.json({ message: 'Price check started' })
     checkAllPrices()
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: (err as Error).message })
   }
 })
 
@@ -190,7 +190,7 @@ const server = app.listen(PORT, () => {
   startScheduler()
 })
 
-function shutdown(signal) {
+function shutdown(signal: string): void {
   console.log(`[Server] ${signal} received, shutting down...`)
   server.close(async (error) => {
     if (error) {

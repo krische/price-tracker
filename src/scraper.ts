@@ -1,6 +1,19 @@
 import { chromium } from 'patchright'
+import type { Page } from 'patchright'
 
-async function gotoProductPage(page, url) {
+export interface ScrapeResult {
+  name: string
+  price: number | null
+  store: string
+  inStock: boolean
+  screenshot: Buffer
+}
+
+export type Store = 'amazon' | 'bestbuy' | 'unknown'
+
+type ScraperError = Error & { screenshot?: Buffer; screenshotError?: Error }
+
+async function gotoProductPage(page: Page, url: string): Promise<void> {
   await page.goto(url, { waitUntil: 'load', timeout: 30000 })
 
   try {
@@ -10,7 +23,7 @@ async function gotoProductPage(page, url) {
       { timeout: 5000 }
     )
   } catch (error) {
-    if (error.name !== 'TimeoutError') throw error
+    if ((error as Error).name !== 'TimeoutError') throw error
 
     const title = await page.title()
     throw new Error(
@@ -23,7 +36,7 @@ async function gotoProductPage(page, url) {
 /**
  * Detect which store the URL belongs to
  */
-function detectStore(url) {
+function detectStore(url: string): Store {
   try {
     const hostname = new URL(url).hostname.toLowerCase()
     if (hostname === 'amazon.com' || hostname.endsWith('.amazon.com')) return 'amazon'
@@ -35,15 +48,15 @@ function detectStore(url) {
 /**
  * Scrape Amazon product price and name
  */
-async function scrapeAmazon(page, url) {
+async function scrapeAmazon(page: Page, url: string): Promise<Omit<ScrapeResult, 'screenshot'>> {
   await gotoProductPage(page, url)
 
   let name = 'Unknown Product'
-  let price = null
+  let price: number | null = null
   let inStock = false
 
   try {
-    name = await page.locator('#productTitle').first().textContent()
+    name = await page.locator('#productTitle').first().textContent() ?? 'Unknown Product'
     name = name?.trim() || 'Unknown Product'
   } catch {}
 
@@ -88,7 +101,7 @@ async function scrapeAmazon(page, url) {
 /**
  * Scrape Best Buy product price and name
  */
-async function scrapeBestBuy(page, url) {
+async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult, 'screenshot'>> {
   await gotoProductPage(page, url)
 
   await page.addStyleTag({
@@ -110,16 +123,16 @@ async function scrapeBestBuy(page, url) {
       page.waitForSelector('[data-component-name="PriceOfferContainer"]', { timeout: 10000 }),
     ])
   } catch (error) {
-    if (error.name !== 'TimeoutError') throw error
-    console.warn('[Scraper] Product components did not appear for %s — proceeding anyway', url)
+    if ((error as Error).name !== 'TimeoutError') throw error
+    console.warn('[Scraper] WarrantySelector did not appear for %s — proceeding anyway', url)
   }
 
   let name = 'Unknown Product'
-  let price = null
+  let price: number | null = null
   let inStock = false
 
   try {
-    name = await page.locator('div[data-component-name="ProductHeader"] h1').textContent({ timeout: 5000 })
+    name = await page.locator('div[data-component-name="ProductHeader"] h1').textContent({ timeout: 5000 }) ?? 'Unknown Product'
     name = name?.trim() || 'Unknown Product'
   } catch {}
 
@@ -158,7 +171,7 @@ async function scrapeBestBuy(page, url) {
 /**
  * Scrape a product URL and return { name, price, store }
  */
-async function scrapeProduct(url) {
+async function scrapeProduct(url: string): Promise<ScrapeResult> {
   const store = detectStore(url)
 
   if (store === 'unknown') {
@@ -171,36 +184,37 @@ async function scrapeProduct(url) {
       '--disable-setuid-sandbox',
       '--window-position=-2400,-2400',
     ],
-    headless: process.env.HEADLESS?.toLowerCase() === 'true',
+    headless: process.env['HEADLESS']?.toLowerCase() === 'true',
   })
 
-  let page
+  let page: Page | undefined
   try {
     const context = await browser.newContext({
       viewport: { width: 1920, height: 1200 },
     })
     page = await context.newPage()
 
-    let result
+    let result: Omit<ScrapeResult, 'screenshot'>
     if (store === 'amazon') {
       result = await scrapeAmazon(page, url)
     } else {
       result = await scrapeBestBuy(page, url)
     }
 
-    result.screenshot = await page.screenshot({ type: 'png' })
-    return result
+    const screenshot = await page.screenshot({ type: 'png' })
+    return { ...result, screenshot }
   } catch (error) {
     console.error('[Scraper] Failed to scrape %s product at %s:', store, url, error)
+    const scraperError = error as ScraperError
     if (page) {
       try {
-        error.screenshot = await page.screenshot({ type: 'png' })
+        scraperError.screenshot = await page.screenshot({ type: 'png' })
       } catch (screenshotError) {
-        error.screenshotError = screenshotError
+        scraperError.screenshotError = screenshotError as Error
         console.error('[Scraper] Failed to capture error screenshot for %s:', url, screenshotError)
       }
     }
-    throw error
+    throw scraperError
   } finally {
     await browser.close()
   }

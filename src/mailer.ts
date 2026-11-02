@@ -1,26 +1,44 @@
 import nodemailer from 'nodemailer'
+import type { Transporter } from 'nodemailer'
 
-let transporter
+let transporter: Transporter | undefined
 
-function getTransporter() {
+function getTransporter(): Transporter {
   if (!transporter) {
     transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env['EMAIL_USER'],
+        pass: process.env['EMAIL_PASS'],
       },
     })
   }
   return transporter
 }
 
+export interface PriceDropAlertParams {
+  productName: string
+  url: string
+  oldPrice: number
+  newPrice: number
+  store: string
+  percentDrop: number
+  screenshot: Buffer
+}
+
+export interface InStockAlertParams {
+  productName: string
+  url: string
+  store: string
+  screenshot: Buffer
+}
+
 /**
  * Send a price drop alert email
  */
-async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store, percentDrop, screenshot }) {
-  const to = process.env.ALERT_EMAIL
-  if (!to || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store, percentDrop, screenshot }: PriceDropAlertParams): Promise<boolean> {
+  const to = process.env['ALERT_EMAIL']
+  if (!to || !process.env['EMAIL_USER'] || !process.env['EMAIL_PASS']) {
     console.log('[Mailer] Email not configured — skipping alert')
     return false
   }
@@ -68,7 +86,7 @@ async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store,
 
   try {
     await getTransporter().sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env['EMAIL_USER'],
       to,
       subject,
       html,
@@ -82,7 +100,7 @@ async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store,
     console.log(`[Mailer] Alert sent for ${productName}`)
     return true
   } catch (err) {
-    console.error('[Mailer] Failed to send email:', err.message)
+    console.error('[Mailer] Failed to send email:', (err as Error).message)
     return false
   }
 }
@@ -90,9 +108,9 @@ async function sendPriceDropAlert({ productName, url, oldPrice, newPrice, store,
 /**
  * Send an alert when a product becomes available again
  */
-async function sendInStockAlert({ productName, url, store, screenshot }) {
-  const to = process.env.ALERT_EMAIL
-  if (!to || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+async function sendInStockAlert({ productName, url, store, screenshot }: InStockAlertParams): Promise<boolean> {
+  const to = process.env['ALERT_EMAIL']
+  if (!to || !process.env['EMAIL_USER'] || !process.env['EMAIL_PASS']) {
     console.log('[Mailer] Email not configured — skipping alert')
     return false
   }
@@ -123,7 +141,7 @@ async function sendInStockAlert({ productName, url, store, screenshot }) {
 
   try {
     await getTransporter().sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env['EMAIL_USER'],
       to,
       subject,
       html,
@@ -137,7 +155,7 @@ async function sendInStockAlert({ productName, url, store, screenshot }) {
     console.log(`[Mailer] In-stock alert sent for ${productName}`)
     return true
   } catch (err) {
-    console.error('[Mailer] Failed to send email:', err.message)
+    console.error('[Mailer] Failed to send email:', (err as Error).message)
     return false
   }
 }

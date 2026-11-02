@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import express from 'express'
 import { test } from 'node:test'
 import { createAuth } from '../src/auth.js'
+import type { AddressInfo } from 'node:net'
 
 test('requires credentials to be configured', () => {
   assert.throws(() => createAuth({ username: '', password: '' }), /must both be configured/)
@@ -19,7 +20,7 @@ test('protects routes with a login session and revokes it on logout', async (t) 
   const server = app.listen(0)
   t.after(() => new Promise((resolve) => server.close(resolve)))
   await new Promise((resolve) => server.once('listening', resolve))
-  const address = server.address()
+  const address = server.address() as AddressInfo
   const baseUrl = `http://127.0.0.1:${address.port}`
 
   const unauthorized = await fetch(`${baseUrl}/api/private`)
@@ -39,9 +40,9 @@ test('protects routes with a login session and revokes it on logout', async (t) 
   })
   assert.equal(login.status, 200)
   const cookie = login.headers.get('set-cookie')
-  assert.match(cookie, /HttpOnly/)
-  assert.match(cookie, /SameSite=Strict/)
-  const sessionCookie = cookie.split(';', 1)[0]
+  assert.match(cookie!, /HttpOnly/)
+  assert.match(cookie!, /SameSite=Strict/)
+  const sessionCookie = cookie!.split(';', 1)[0]!
 
   const authorized = await fetch(`${baseUrl}/api/private`, {
     headers: { Cookie: sessionCookie },
