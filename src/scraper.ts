@@ -114,25 +114,15 @@ async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult
     `,
   })
 
-  // Wait for the loading markers to disappear, which signals that components
+  // Wait for all loading markers to disappear, which signals that components
   // including AddToCart have fully hydrated.
   // Fall back gracefully if they never disappear (e.g. certain product types).
   try {
     await page.waitForFunction(
       () => {
-        const componentSelectors = [
-          'div[data-component-name="WarrantySelector"]',
-          'div[data-component-name="PriceOfferContainer"]',
-        ]
-
-        return componentSelectors.every((componentSelector) => {
-          const component = document.querySelector(componentSelector)
-          if (!component) return false
-
-          return !Array.from(component.querySelectorAll('svg title')).some(
-            (title) => title.textContent?.trim() === 'Loading...'
-          )
-        })
+        return !Array.from(document.querySelectorAll('svg title')).some(
+          (title) => title.textContent?.trim() === 'Loading...'
+        )
       },
       undefined,
       { timeout: 10000 }
