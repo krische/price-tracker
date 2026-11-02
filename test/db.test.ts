@@ -225,13 +225,13 @@ test('thins redundant rows in the 7–30 day window to one per day', () => {
   for (let i = 0; i < 3; i++) {
     database.prepare(`
       INSERT INTO price_history (product_id, price, in_stock, scrape_error, checked_at)
-      VALUES (1, 20.0, 1, 0, datetime('now', '-10 days', '+${i} hours'))
+      VALUES (1, 20.0, 1, 0, datetime('now', '-10 days', 'start of day', '+${i} hours'))
     `).run()
   }
   // Different price on the same day → kept separately
   database.prepare(`
     INSERT INTO price_history (product_id, price, in_stock, scrape_error, checked_at)
-    VALUES (1, 18.0, 1, 0, datetime('now', '-10 days', '+5 hours'))
+    VALUES (1, 18.0, 1, 0, datetime('now', '-10 days', 'start of day', '+5 hours'))
   `).run()
   database.close()
 
