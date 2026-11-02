@@ -63,7 +63,7 @@ docker run -d \
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with the configured username and password. The mounted volume keeps the SQLite database when the container is replaced. To enable email or Pushover alerts, pass the relevant optional [environment variables](#environment-variables) listed below with additional `-e NAME=value` options.
 
-When deployed behind a reverse proxy, the app trusts one proxy hop to identify client IPs for rate limiting. Keep the app reachable only through that trusted proxy, and configure it to set or safely append `X-Forwarded-For`. If your deployment uses a different proxy topology, adjust the `trust proxy` setting in `src/server.js` to match it; do not use blanket proxy trust (`true`) unless every path to the app passes through trusted proxies.
+When deployed behind a reverse proxy, the app trusts one proxy hop to identify client IPs for rate limiting. Keep the app reachable only through that trusted proxy, and configure it to set or safely append `X-Forwarded-For`. If your deployment uses a different proxy topology, adjust the `trust proxy` setting in `src/server.ts` to match it; do not use blanket proxy trust (`true`) unless every path to the app passes through trusted proxies.
 
 #### Local
 
@@ -146,12 +146,12 @@ npm test
 ```
 price-tracker/
 ├── src/
-│   ├── server.js        # Express server + API routes
-│   ├── scraper.js       # Playwright scraper (Amazon + Best Buy)
-│   ├── scheduler.js     # node-cron job + price check logic
-│   ├── mailer.js        # Nodemailer email alerts
-│   ├── notifications.js # Optional email and Pushover alert dispatch
-│   └── db.js            # SQLite database setup
+│   ├── server.ts        # Express server + API routes
+│   ├── scraper.ts       # Playwright scraper (Amazon + Best Buy)
+│   ├── scheduler.ts     # node-cron job + price check logic
+│   ├── mailer.ts        # Nodemailer email alerts
+│   ├── notifications.ts # Optional email and Pushover alert dispatch
+│   └── db.ts            # SQLite database setup
 ├── public/
 │   ├── index.html       # Frontend dashboard (Chart.js)
 │   └── favicon.png      # Product tracking favicon

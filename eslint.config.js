@@ -16,6 +16,8 @@ export default [
       '@typescript-eslint': tsPlugin,
     },
     rules: {
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'error',
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-undef': 'off', // TypeScript handles this
     },
