@@ -4,13 +4,11 @@ import express from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import packageJson from '../package.json' with { type: 'json' }
-import { fileURLToPath } from 'node:url'
 import { createAuth } from './auth.js'
 import { closeDb, getDb } from './db.js'
 import { scrapeProduct } from './scraper.js'
 import { startScheduler, stopScheduler, checkAllPrices } from './scheduler.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const version = process.env['APP_VERSION'] || packageJson.version
 
 const app = express()
@@ -30,7 +28,7 @@ const limiter = rateLimit({
 
 app.use(limiter)
 app.use(express.json())
-app.use(express.static(path.join(__dirname, '..', 'public')))
+app.use(express.static(path.join(process.cwd(), 'public')))
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 

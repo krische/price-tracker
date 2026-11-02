@@ -23,13 +23,15 @@
     "patchright": "^1.64.2"
   },
   "allowScripts": {
-    "better-sqlite3": true
+    "better-sqlite3@13.0.3": true,
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.39.5",
     "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.6",

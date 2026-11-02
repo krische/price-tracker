@@ -87,7 +87,7 @@ async function scrapeAmazon(page: Page, url: string): Promise<Omit<ScrapeResult,
   ]
   for (const selector of inStockSelectors) {
     try {
-      const addToCart = await page.locator(selector).first()
+      const addToCart = page.locator(selector).first()
       if (await addToCart.count()) {
         inStock = true
         break
@@ -114,17 +114,22 @@ async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult
     `,
   })
 
-  // Wait for the dynamic product components to appear, which signals that
-  // components including AddToCart have fully hydrated.
-  // Fall back gracefully if it never appears (e.g. certain product types).
+  // Wait for all loading markers to disappear, which signals that components
+  // including AddToCart have fully hydrated.
+  // Fall back gracefully if they never disappear (e.g. certain product types).
   try {
-    await Promise.all([
-      page.waitForSelector('[data-component-name="WarrantySelector"]', { timeout: 10000 }),
-      page.waitForSelector('[data-component-name="PriceOfferContainer"]', { timeout: 10000 }),
-    ])
+    await page.waitForFunction(
+      () => {
+        return !Array.from(document.querySelectorAll('svg title')).some(
+          (title) => title.textContent?.trim() === 'Loading...'
+        )
+      },
+      undefined,
+      { timeout: 10000 }
+    )
   } catch (error) {
     if ((error as Error).name !== 'TimeoutError') throw error
-    console.warn('[Scraper] WarrantySelector did not appear for %s — proceeding anyway', url)
+    console.warn('[Scraper] Best Buy loading indicators did not disappear for %s — proceeding anyway', url)
   }
 
   let name = 'Unknown Product'
@@ -159,8 +164,12 @@ async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult
     try {
       const button = page.locator(selector).first()
       if (await button.count()) {
-        inStock = (await button.getAttribute('disabled')) === null
-        break
+        const disabled = (await button.getAttribute('disabled')) === null
+        if (!disabled) {
+          const buttonText = (await button.textContent())?.toLowerCase().trim()
+          inStock = ['sold out', 'unavailable'].every((text) => buttonText !== text)
+          break
+        }
       }
     } catch {}
   }
