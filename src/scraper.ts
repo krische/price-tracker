@@ -1,5 +1,5 @@
 import { chromium } from 'patchright'
-import type { Page } from 'patchright'
+import type { Browser, Page } from 'patchright'
 
 export interface ScrapeResult {
   name: string
@@ -12,6 +12,30 @@ export interface ScrapeResult {
 export type Store = 'amazon' | 'bestbuy' | 'unknown'
 
 type ScraperError = Error & { screenshot?: Buffer; screenshotError?: Error }
+
+async function launchBrowser(headless: boolean): Promise<Browser> {
+  const options = {
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--window-position=-2400,-2400',
+    ],
+    headless,
+  }
+
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await chromium.launch(options)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const displayUnavailable = message.includes('Missing X server') || message.includes('without having a XServer')
+      if (headless || !displayUnavailable || attempt >= 3) throw error
+
+      console.warn(`[Scraper] Headed browser launch failed because no X server is available; retrying (${attempt}/2)`)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
+}
 
 async function gotoProductPage(page: Page, url: string): Promise<void> {
   await page.goto(url, { waitUntil: 'load', timeout: 30000 })
@@ -189,14 +213,7 @@ async function scrapeProduct(url: string): Promise<ScrapeResult> {
     throw new Error('Only Amazon and Best Buy URLs are supported')
   }
 
-  const browser = await chromium.launch({
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--window-position=-2400,-2400',
-    ],
-    headless: process.env['HEADLESS']?.toLowerCase() === 'true',
-  })
+  const browser = await launchBrowser(process.env['HEADLESS']?.toLowerCase() === 'true')
 
   let page: Page | undefined
   try {

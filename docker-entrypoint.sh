@@ -2,6 +2,8 @@
 set -e
 
 start_xvfb() {
+  # Remove a stale socket left behind if Xvfb was terminated unexpectedly.
+  rm -f /tmp/.X11-unix/X99
   Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp > /dev/null 2>&1 &
   xvfb_pid=$!
   for _ in 1 2 3 4 5; do
