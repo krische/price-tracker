@@ -164,9 +164,11 @@ async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult
     try {
       const button = page.locator(selector).first()
       if (await button.count()) {
-        const disabled = (await button.getAttribute('disabled')) === null
+        const disabled = (await button.getAttribute('disabled')) !== null
         if (!disabled) {
           const buttonText = (await button.textContent())?.toLowerCase().trim()
+          // I'd rather get a false positive than a false negative here,
+          // so we check for known "out of stock" text instead of looking for "in stock" text.
           inStock = ['sold out', 'unavailable'].every((text) => buttonText !== text)
           break
         }

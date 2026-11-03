@@ -1,6 +1,8 @@
 # Stage 1: Build dependencies (compiles native addons like better-sqlite3)
 FROM node:26.13.0-trixie AS builder
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /app
 
 RUN apt-get update \
@@ -17,6 +19,8 @@ RUN npm run build \
 
 # Stage 2: Final runtime image
 FROM node:26.13.0-trixie
+
+ARG DEBIAN_FRONTEND=noninteractive
 
 LABEL org.opencontainers.image.source=https://github.com/krische/price-tracker
 LABEL org.opencontainers.image.description="Price drop and stock tracker for Amazon and Best Buy — get email alerts when prices fall or items are back in stock."
