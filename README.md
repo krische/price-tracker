@@ -100,7 +100,7 @@ PUSHOVER_USER_KEY=your_user_or_group_key
 CHECK_INTERVAL_EXPRESSION="0 */6 * * *"
 CHECK_INTERVAL_JITTER=0
 PRICE_DROP_THRESHOLD=5           # Alert when price drops by this %
-HEADLESS=false                   # Use headed Chromium; set true to use headless mode
+HEADLESS=false                   # Use headed Chromium; requires an X server (the Docker image provides Xvfb)
 PORT=3000
 DB_PATH=./prices.db              # SQLite database file path (optional)
 ```
