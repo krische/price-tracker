@@ -18,6 +18,10 @@ updates:
   - package-ecosystem: npm
     directory: "/"
     groups:
+      typescript-ecosystem:
+        patterns:
+          - "typescript"
+          - "@typescript-eslint/*"
       npm:
         patterns: ["*"]
     schedule:
