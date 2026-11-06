@@ -181,24 +181,16 @@ async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult
     } catch {}
   }
 
-  const inStockSelectors = [
-    'div[data-component-name="AddToCart"] button'
-  ]
-  for (const selector of inStockSelectors) {
-    try {
-      const button = page.locator(selector).first()
-      if (await button.count()) {
-        const disabled = (await button.getAttribute('disabled')) !== null
-        if (!disabled) {
-          const buttonText = (await button.textContent())?.toLowerCase().trim()
-          // I'd rather get a false positive than a false negative here,
-          // so we check for known "out of stock" text instead of looking for "in stock" text.
-          console.log('[Scraper] Best Buy add to cart button text is: "%s"', buttonText)
-          inStock = ['see details', 'shop open-box', 'sold out', 'unavailable'].every((text) => buttonText !== text)
-          break
-        }
-      }
-    } catch {}
+  const button = page.locator('aside div[data-component-name="AddToCart"] button[data-testid]:not([data-testid*="carousel"])').first()
+  await button.waitFor({ state: 'attached', timeout: 15000 })
+
+  const disabled = (await button.getAttribute('disabled')) !== null
+  if (!disabled) {
+    const buttonText = (await button.textContent())?.toLowerCase().trim()
+    // I'd rather get a false positive than a false negative here,
+    // so we check for known "out of stock" text instead of looking for "in stock" text.
+    console.log('[Scraper] Best Buy add to cart button text is: "%s"', buttonText)
+    inStock = ['see details', 'shop open-box', 'sold out', 'unavailable'].every((text) => buttonText !== text)
   }
 
   return { name, price, store: 'Best Buy', inStock }
