@@ -193,10 +193,8 @@ async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult
           const buttonText = (await button.textContent())?.toLowerCase().trim()
           // I'd rather get a false positive than a false negative here,
           // so we check for known "out of stock" text instead of looking for "in stock" text.
+          console.log('[Scraper] Best Buy add to cart button text is: "%s"', buttonText)
           inStock = ['see details', 'shop open-box', 'sold out', 'unavailable'].every((text) => buttonText !== text)
-          if (inStock) {
-            console.log('[Scraper] Best Buy product seems to be in stock, button text is: "%s"', buttonText)
-          }
           break
         }
       }
