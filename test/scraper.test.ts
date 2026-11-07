@@ -14,6 +14,6 @@ test('returns unknown for unsupported store URLs', () => {
 test('rejects unsupported URLs before starting a scrape', async () => {
   await assert.rejects(
     scrapeProduct('https://example.com/product'),
-    { message: 'Only Amazon and Best Buy URLs are supported' }
+    { message: 'Only Amazon, Best Buy, and PlayStation URLs are supported' }
   )
 })

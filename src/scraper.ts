@@ -37,23 +37,29 @@ async function launchBrowser(headless: boolean): Promise<Browser> {
   }
 }
 
-async function gotoProductPage(page: Page, url: string): Promise<void> {
-  await page.goto(url, { waitUntil: 'load', timeout: 30000 })
-
-  try {
-    await page.waitForFunction(
-      () => Boolean(globalThis.document.body?.innerText.trim()),
-      undefined,
-      { timeout: 5000 }
-    )
-  } catch (error) {
-    if ((error as Error).name !== 'TimeoutError') throw error
-
-    const title = await page.title()
-    throw new Error(
-      `Page rendered no visible text at ${page.url()} (title: ${title || 'empty'})`,
-      { cause: error }
-    )
+async function gotoProductPage(attempts: number, page: Page, url: string): Promise<void> {
+  for (let attempt = 1; attempt <= Math.floor(attempts); attempt++) {
+    try {
+      await page.goto(url, { waitUntil: 'load', timeout: 20000 })
+      await page.waitForFunction(
+        () => Boolean(globalThis.document.body?.innerText.trim()),
+        undefined,
+        { timeout: 5000 }
+      )
+      break
+    } catch (error) {
+      if ((error as Error).name === 'TimeoutError') {
+        if (attempt === Math.floor(attempts)) {
+          throw error
+        } else {
+          console.warn('[Scraper] Page load failed for %s (attempt %d/%d): %s', url, attempt, Math.floor(attempts), error)
+          await new Promise(resolve => setTimeout(resolve, 10000))
+          continue
+        }
+      } else {
+        throw error
+      }
+    }
   }
 }
 
@@ -74,7 +80,7 @@ function detectStore(url: string): Store {
  * Scrape Amazon product price and name
  */
 async function scrapeAmazon(page: Page, url: string): Promise<Omit<ScrapeResult, 'screenshot'>> {
-  await gotoProductPage(page, url)
+  await gotoProductPage(1, page, url)
 
   let name = 'Unknown Product'
   let price: number | null = null
@@ -127,7 +133,7 @@ async function scrapeAmazon(page: Page, url: string): Promise<Omit<ScrapeResult,
  * Scrape Best Buy product price and name
  */
 async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult, 'screenshot'>> {
-  await gotoProductPage(page, url)
+  await gotoProductPage(2, page, url)
 
   await page.addStyleTag({
     content: `
@@ -198,7 +204,7 @@ async function scrapeBestBuy(page: Page, url: string): Promise<Omit<ScrapeResult
 }
 
 async function scrapePlaystation(page: Page, url: string): Promise<Omit<ScrapeResult, 'screenshot'>> {
-  await gotoProductPage(page, url)
+  await gotoProductPage(1, page, url)
 
   try {
     await page.locator('div.loader').waitFor({ state: 'hidden', timeout: 15000 })
