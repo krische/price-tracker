@@ -9,7 +9,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { min-height: 100vh; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
-    
+
     header {
       background: linear-gradient(135deg, #1e40af, #3b82f6);
       color: white;
@@ -97,6 +97,7 @@
     }
     .store-amazon { background: #fff7ed; color: #c2410c; }
     .store-bestbuy { background: #eff6ff; color: #1d4ed8; }
+    .store-playstation { background: #eef2ff; color: #1f1f1f; }
     .stock-badge {
       display: inline-block;
       margin-left: 6px;
@@ -147,7 +148,7 @@
     <span style="font-size:1.75rem">📉</span>
     <div>
       <h1>Price Tracker</h1>
-      <div style="opacity:0.8;font-size:0.8rem">Amazon & Best Buy</div>
+      <div style="opacity:0.8;font-size:0.8rem">Track Availability & Price</div>
     </div>
     <p id="lastCheck" class="last-check"></p>
     <button id="logoutBtn" class="btn-secondary btn-sm" onclick="logout()" hidden>Log out</button>
@@ -169,7 +170,7 @@
     <div class="card">
       <h2>Track a New Product</h2>
       <div class="add-form">
-        <input type="url" id="urlInput" placeholder="Paste Amazon or Best Buy product URL..." />
+        <input type="url" id="urlInput" placeholder="Paste Amazon, Best Buy, or Playstation product URL..." />
         <input type="number" id="thresholdInput" class="threshold" placeholder="Alert %" value="5" min="1" max="100" />
         <button class="btn-primary" id="addBtn" onclick="addProduct()">Track Price</button>
       </div>
@@ -298,7 +299,9 @@
       }
 
       container.innerHTML = products.map(p => {
-        const storeBadge = p.store === 'Amazon' ? 'store-amazon' : 'store-bestbuy'
+        const storeBadge = p.store === 'Amazon'
+          ? 'store-amazon'
+          : p.store === 'Best Buy' ? 'store-bestbuy' : 'store-playstation'
         const priceDrop = p.max_price && p.last_price && p.last_price < p.max_price
           ? `<span class="price-drop">▼ ${(((p.max_price - p.last_price) / p.max_price) * 100).toFixed(1)}% from high</span>`
           : ''
@@ -331,7 +334,7 @@
               ${priceDrop}
             </div>
             <div class="price-meta">
-              Last checked: ${lastChecked} &nbsp;•&nbsp; 
+              Last checked: ${lastChecked} &nbsp;•&nbsp;
               Alert at ${p.alert_threshold}% drop or in stock &nbsp;•&nbsp;
               ${p.price_check_count} price data point${p.price_check_count !== 1 ? 's' : ''}
               ${p.scrape_error_count ? ` &nbsp;•&nbsp; ${p.scrape_error_count} scrape error${p.scrape_error_count !== 1 ? 's' : ''}` : ''}
