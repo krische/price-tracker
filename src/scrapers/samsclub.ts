@@ -21,7 +21,7 @@ export async function scrapeSamsClub(page: Page, url: string): Promise<Omit<Scra
   } catch {}
 
   const priceSelectors = [
-    'div[data-seo-id="add-to-cart-section"] button',
+    'span[data-seo-id="hero-price"]',
   ]
   for (const selector of priceSelectors) {
     try {
@@ -29,7 +29,7 @@ export async function scrapeSamsClub(page: Page, url: string): Promise<Omit<Scra
       if (priceText) {
         const parsed = parseFloat(priceText.replace(/[^0-9.]/g, ''))
         if (!isNaN(parsed) && parsed > 0) {
-          price = parsed / 100 // cents are in a different element and just get appended to the text content
+          price = parsed
           break
         }
       }
