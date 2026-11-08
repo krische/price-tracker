@@ -95,11 +95,12 @@
       font-size: 0.75rem;
       font-weight: 600;
     }
-    .store-amazon { background: #fff7ed; color: #c2410c; }
-    .store-bestbuy { background: #eff6ff; color: #1d4ed8; }
-    .store-gamestop { background: #f0f0f0; color: #000; }
-    .store-playstation { background: #eef2ff; color: #1f1f1f; }
-    .store-samsclub { background: #f0fdf4; color: rgb(10, 108, 255); }
+    .store-amazon { background: #0F1111; color: #F3A847; }
+    .store-bestbuy { background: #0a4abf; color: #f6eb16; }
+    .store-gamestop { background: #000; color: #FD0000; }
+    .store-playstation { background: #f0f0f0; color: #0070CC; }
+    .store-samsclub { background: #f0f0f0; color: #0A6CFF; }
+    .store-target { background: #f0f0f0; color: #C00; }
     .stock-badge {
       display: inline-block;
       margin-left: 6px;
@@ -172,7 +173,7 @@
     <div class="card">
       <h2>Track a New Product</h2>
       <div class="add-form">
-        <input type="url" id="urlInput" placeholder="Paste Amazon, Best Buy, GameStop, Playstation, Sam's Club product URL..." />
+        <input type="url" id="urlInput" placeholder="Amazon, Best Buy, GameStop, Playstation, Sam's Club, or Target product URL..." />
         <input type="number" id="thresholdInput" class="threshold" placeholder="Alert %" value="5" min="1" max="100" />
         <button class="btn-primary" id="addBtn" onclick="addProduct()">Track Price</button>
       </div>

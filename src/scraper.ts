@@ -5,6 +5,7 @@ import { scrapeBestBuy } from './scrapers/bestbuy.js'
 import { scrapeGameStop } from './scrapers/gamestop.js'
 import { scrapePlaystation } from './scrapers/playstation.js'
 import { scrapeSamsClub } from './scrapers/samsclub.js'
+import { scrapeTarget } from './scrapers/target.js'
 
 export interface ScrapeResult {
   name: string
@@ -14,7 +15,7 @@ export interface ScrapeResult {
   screenshot: Buffer
 }
 
-export type Store = 'amazon' | 'bestbuy' | 'gamestop' | 'playstation' | 'samsclub' | 'unknown'
+export type Store = 'amazon' | 'bestbuy' | 'gamestop' | 'playstation' | 'samsclub' | 'target' | 'unknown'
 
 type ScraperError = Error & { screenshot?: Buffer; screenshotError?: Error }
 
@@ -84,6 +85,7 @@ export function detectStore(url: string): Store {
     if (hostname === 'gamestop.com' || hostname.endsWith('.gamestop.com')) return 'gamestop'
     if (hostname === 'direct.playstation.com' || hostname.endsWith('.playstation.com')) return 'playstation'
     if (hostname === 'samsclub.com' || hostname.endsWith('.samsclub.com')) return 'samsclub'
+    if (hostname === 'target.com' || hostname.endsWith('.target.com')) return 'target'
   } catch {}
   return 'unknown'
 }
@@ -95,7 +97,7 @@ async function scrapeProductWithBrowser(browser: Browser, url: string): Promise<
   const store = detectStore(url)
 
   if (store === 'unknown') {
-    throw new Error('Only Amazon, Best Buy, GameStop, PlayStation, and Sams Club URLs are supported')
+    throw new Error("Only Amazon, Best Buy, GameStop, PlayStation, Sam's Club, and Target URLs are supported")
   }
 
   const context = await browser.newContext({
@@ -114,8 +116,10 @@ async function scrapeProductWithBrowser(browser: Browser, url: string): Promise<
       result = await scrapeGameStop(page, url)
     } else if (store === 'playstation') {
       result = await scrapePlaystation(page, url)
-    } else {
+    } else if (store === 'samsclub') {
       result = await scrapeSamsClub(page, url)
+    } else {
+      result = await scrapeTarget(page, url)
     }
 
     const screenshot = await page.screenshot({ type: 'png' })
@@ -143,7 +147,7 @@ export async function createScraperSession(): Promise<ScraperSession> {
   return {
     scrapeProduct: (url) => {
       if (detectStore(url) === 'unknown') {
-        return Promise.reject(new Error('Only Amazon, Best Buy, and PlayStation URLs are supported'))
+        return Promise.reject(new Error("Only Amazon, Best Buy, GameStop, PlayStation, Sam's Club, and Target URLs are supported"))
       }
       return scrapeProductWithBrowser(browser, url)
     },
@@ -153,7 +157,7 @@ export async function createScraperSession(): Promise<ScraperSession> {
 
 export async function scrapeProduct(url: string): Promise<ScrapeResult> {
   if (detectStore(url) === 'unknown') {
-    throw new Error("Only Amazon, Best Buy, GameStop, PlayStation, and Sam's Club URLs are supported")
+    throw new Error("Only Amazon, Best Buy, GameStop, PlayStation, Sam's Club, and Target URLs are supported")
   }
 
   const session = await createScraperSession()
