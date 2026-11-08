@@ -13,6 +13,11 @@ export type Store = 'amazon' | 'bestbuy' | 'playstation' | 'unknown'
 
 type ScraperError = Error & { screenshot?: Buffer; screenshotError?: Error }
 
+export interface ScraperSession {
+  scrapeProduct(url: string): Promise<ScrapeResult>
+  close(): Promise<void>
+}
+
 async function launchBrowser(headless: boolean): Promise<Browser> {
   const options = {
     args: [
@@ -247,20 +252,18 @@ async function scrapePlaystation(page: Page, url: string): Promise<Omit<ScrapeRe
 /**
  * Scrape a product URL and return { name, price, store }
  */
-async function scrapeProduct(url: string): Promise<ScrapeResult> {
+async function scrapeProductWithBrowser(browser: Browser, url: string): Promise<ScrapeResult> {
   const store = detectStore(url)
 
   if (store === 'unknown') {
     throw new Error('Only Amazon, Best Buy, and PlayStation URLs are supported')
   }
 
-  const browser = await launchBrowser(process.env['HEADLESS']?.toLowerCase() === 'true')
-
+  const context = await browser.newContext({
+    viewport: { width: 1920, height: 1200 },
+  })
   let page: Page | undefined
   try {
-    const context = await browser.newContext({
-      viewport: { width: 1920, height: 1200 },
-    })
     page = await context.newPage()
 
     let result: Omit<ScrapeResult, 'screenshot'>
@@ -287,8 +290,35 @@ async function scrapeProduct(url: string): Promise<ScrapeResult> {
     }
     throw scraperError
   } finally {
-    await browser.close()
+    await context.close()
   }
 }
 
-export { scrapeProduct, detectStore }
+async function createScraperSession(): Promise<ScraperSession> {
+  const browser = await launchBrowser(process.env['HEADLESS']?.toLowerCase() === 'true')
+
+  return {
+    scrapeProduct: (url) => {
+      if (detectStore(url) === 'unknown') {
+        return Promise.reject(new Error('Only Amazon, Best Buy, and PlayStation URLs are supported'))
+      }
+      return scrapeProductWithBrowser(browser, url)
+    },
+    close: () => browser.close(),
+  }
+}
+
+async function scrapeProduct(url: string): Promise<ScrapeResult> {
+  if (detectStore(url) === 'unknown') {
+    throw new Error('Only Amazon, Best Buy, and PlayStation URLs are supported')
+  }
+
+  const session = await createScraperSession()
+  try {
+    return await session.scrapeProduct(url)
+  } finally {
+    await session.close()
+  }
+}
+
+export { createScraperSession, scrapeProduct, detectStore }
