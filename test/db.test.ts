@@ -48,6 +48,8 @@ test('creates the database at DB_PATH and initializes the current schema', () =>
 
   assert.ok(productColumns.includes('last_screenshot'))
   assert.ok(productColumns.includes('in_stock'))
+  assert.ok(productColumns.includes('throttle'))
+  assert.ok(productColumns.includes('throttle_remaining'))
   assert.ok(historyColumns.includes('in_stock'))
   assert.ok(historyColumns.includes('scrape_error'))
   assert.ok(historyColumns.includes('scrape_error_message'))
@@ -87,12 +89,12 @@ test('migrates legacy price history while preserving existing rows', () => {
   initializeDatabase(databasePath)
 
   const db = new Database(databasePath)
-  const product = db.prepare('SELECT in_stock, last_screenshot FROM products WHERE id = 1').get()
+  const product = db.prepare('SELECT in_stock, last_screenshot, throttle, throttle_remaining FROM products WHERE id = 1').get()
   const history = db.prepare('SELECT price, in_stock FROM price_history WHERE product_id = 1').get()
   const historyError = db.prepare('SELECT scrape_error, scrape_error_message FROM price_history WHERE product_id = 1').get()
   const historyPrice = (db.pragma('table_info(price_history)') as Array<{ name: string; notnull: number }>).find((column) => column.name === 'price')
 
-  assert.deepEqual(product, { in_stock: 1, last_screenshot: null })
+  assert.deepEqual(product, { in_stock: 1, last_screenshot: null, throttle: 0, throttle_remaining: 0 })
   assert.deepEqual(history, { price: 12.5, in_stock: 1 })
   assert.deepEqual(historyError, { scrape_error: 0, scrape_error_message: null })
   assert.equal(historyPrice!.notnull, 0)

@@ -12,6 +12,7 @@ A price drop tracker for **Amazon** and **Best Buy** with optional email and Pus
 - **🔗 Add any Amazon or Best Buy URL** — just paste and track
 - **🕷️ Playwright scraper** — headless browser scraping for accurate prices
 - **⏰ Scheduled checks** — cron job runs every 6 hours (configurable)
+- **⏳ Per-product throttle** — skip a configurable number of scheduled triggers between checks
 - **💾 SQLite storage** — the past two weeks of price history stored locally
 - **📦 Stock tracking** — current availability and availability history for each product
 - **📈 Price and availability history charts** — Chart.js graphs for each product
@@ -137,9 +138,10 @@ npm test
 
 1. Paste an Amazon or Best Buy product URL in the text field
 2. Set your alert threshold (e.g., `5` = alert when price drops 5%)
-3. Click **"Track Price"** — the app scrapes the current price
-4. The scheduler checks all products every 6 hours automatically
-5. If configured, you'll receive an email and/or Pushover alert when a price drop is detected or an out-of-stock product becomes available again
+3. Set a throttle (e.g., `0` checks every scheduled trigger, `1` skips every other trigger, `2` checks every third trigger)
+4. Click **"Track Price"** — the app scrapes the current price
+5. The scheduler checks products according to their throttle every 6 hours automatically. Startup and manual checks always check all products.
+6. If configured, you'll receive an email and/or Pushover alert when a price drop is detected or an out-of-stock product becomes available again
 
 ## 📁 Project Structure
 

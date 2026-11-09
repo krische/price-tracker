@@ -15,19 +15,49 @@ interface TrackedProduct {
   url: string
   last_price: number | null
   in_stock: number
+  throttle: number
+  throttle_remaining: number
 }
 
 type ScraperError = Error & { screenshot?: Buffer; screenshotError?: Error }
 
+function advanceThrottle(throttle: number, remaining: number): { shouldCheck: boolean; remaining: number } {
+  if (remaining > 0) {
+    return { shouldCheck: false, remaining: remaining - 1 }
+  }
+  return { shouldCheck: true, remaining: throttle }
+}
+
 /**
  * Check all tracked products for price changes
  */
-async function runPriceCheck(): Promise<void> {
+async function runPriceCheck(scheduled = false): Promise<void> {
   const db = getDb()
   prunePriceHistory()
-  const products = db.prepare('SELECT id, url, last_price, in_stock FROM products').all() as TrackedProduct[]
+  let skippedCount = 0
+  const products = scheduled
+    ? db.transaction(() => {
+        const allProducts = db.prepare(`
+          SELECT id, url, last_price, in_stock, throttle, throttle_remaining
+          FROM products
+        `).all() as TrackedProduct[]
+        const dueProducts: TrackedProduct[] = []
 
-  console.log(`[Scheduler] Checking ${products.length} product(s)...`)
+        for (const product of allProducts) {
+          const next = advanceThrottle(product.throttle, product.throttle_remaining)
+          db.prepare('UPDATE products SET throttle_remaining = ? WHERE id = ?').run(next.remaining, product.id)
+          if (next.shouldCheck) {
+            dueProducts.push(product)
+          } else {
+            skippedCount++
+          }
+        }
+
+        return dueProducts
+      })()
+    : db.prepare('SELECT id, url, last_price, in_stock, throttle, throttle_remaining FROM products').all() as TrackedProduct[]
+
+  console.log(`[Scheduler] Checking ${products.length} product(s); skipped ${skippedCount} throttled product(s)...`)
 
   if (products.length === 0) {
     console.log('[Scheduler] Check complete.')
@@ -139,8 +169,8 @@ async function runPriceCheck(): Promise<void> {
   console.log('[Scheduler] Check complete.')
 }
 
-function checkAllPrices(): Promise<void> {
-  const check = runPriceCheck()
+function checkAllPrices(scheduled = false): Promise<void> {
+  const check = runPriceCheck(scheduled)
   activeChecks.add(check)
   check.then(
     () => activeChecks.delete(check),
@@ -163,7 +193,7 @@ function startScheduler(): void {
     cronExpression,
     () => {
       console.log(`[Scheduler] Running scheduled price check at ${new Date().toISOString()}`)
-      checkAllPrices().catch(err => console.error('[Scheduler] Error:', err))
+      checkAllPrices(true).catch(err => console.error('[Scheduler] Error:', err))
     },
     {
       maxRandomDelay: intervalJitter * 1000, // Random jitter in milliseconds
@@ -189,4 +219,4 @@ async function stopScheduler(): Promise<void> {
   }
 }
 
-export { startScheduler, stopScheduler, checkAllPrices }
+export { startScheduler, stopScheduler, checkAllPrices, advanceThrottle }

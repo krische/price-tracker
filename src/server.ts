@@ -50,7 +50,7 @@ app.get('/api/products', (req, res) => {
   const db = getDb()
   const products = db.prepare(`
     SELECT p.id, p.url, p.name, p.store, p.added_at, p.last_checked,
-           p.last_price, p.lowest_price, p.alert_threshold, p.in_stock,
+           p.last_price, p.lowest_price, p.alert_threshold, p.throttle, p.in_stock,
            (p.last_screenshot IS NOT NULL) as has_screenshot,
            COUNT(ph.id) as check_count,
            COUNT(ph.price) as price_check_count,
@@ -67,10 +67,17 @@ app.get('/api/products', (req, res) => {
 
 // POST add a new product
 app.post('/api/products', async (req, res) => {
-  const { url, alertThreshold } = req.body as { url?: string; alertThreshold?: number }
+  const { url, alertThreshold, throttle } = req.body as {
+    url?: string
+    alertThreshold?: number
+    throttle?: number
+  }
 
   if (!url) {
     return res.status(400).json({ error: 'URL is required' })
+  }
+  if (throttle !== undefined && (!Number.isSafeInteger(throttle) || throttle < 0)) {
+    return res.status(400).json({ error: 'Throttle must be a nonnegative integer' })
   }
 
   try {
@@ -88,8 +95,8 @@ app.post('/api/products', async (req, res) => {
 
     const product = db.transaction(() => {
       const stmt = db.prepare(`
-        INSERT INTO products (url, name, store, last_price, lowest_price, alert_threshold, in_stock, last_screenshot)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (url, name, store, last_price, lowest_price, alert_threshold, throttle, in_stock, last_screenshot)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       const info = stmt.run(
         url,
@@ -98,6 +105,7 @@ app.post('/api/products', async (req, res) => {
         result.price,
         result.price,
         alertThreshold || parseFloat(process.env['PRICE_DROP_THRESHOLD'] || '5'),
+        throttle ?? 0,
         result.inStock ? 1 : 0,
         result.screenshot.toString('base64')
       )
@@ -109,7 +117,7 @@ app.post('/api/products', async (req, res) => {
       )
       return db.prepare(`
         SELECT id, url, name, store, added_at, last_checked, last_price,
-               lowest_price, alert_threshold, in_stock
+               lowest_price, alert_threshold, throttle, in_stock
         FROM products
         WHERE id = ?
       `).get(info.lastInsertRowid)

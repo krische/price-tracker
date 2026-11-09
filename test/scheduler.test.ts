@@ -2,7 +2,23 @@ import assert from 'node:assert/strict'
 import cron from 'node-cron'
 import { test } from 'node:test'
 import type { TestContext } from 'node:test'
-import { startScheduler, stopScheduler } from '../src/scheduler.js'
+import { advanceThrottle, startScheduler, stopScheduler } from '../src/scheduler.js'
+
+test('throttle skips the configured number of scheduled triggers between checks', () => {
+  for (const [throttle, expected] of [
+    [0, [true, true, true, true]],
+    [1, [true, false, true, false]],
+    [2, [true, false, false, true, false, false]],
+  ] as const) {
+    let remaining = 0
+    const actual = Array.from({ length: expected.length }, () => {
+      const next = advanceThrottle(throttle, remaining)
+      remaining = next.remaining
+      return next.shouldCheck
+    })
+    assert.deepEqual(actual, expected)
+  }
+})
 
 function startSchedulerWithExpression(t: TestContext, expression?: string): string | undefined {
   const previousExpression = process.env['CHECK_INTERVAL_EXPRESSION']

@@ -65,6 +65,8 @@ function initSchema(): void {
       last_price REAL,
       lowest_price REAL,
       alert_threshold REAL DEFAULT 5.0,
+      throttle INTEGER NOT NULL DEFAULT 0,
+      throttle_remaining INTEGER NOT NULL DEFAULT 0,
       in_stock INTEGER NOT NULL DEFAULT 1,
       last_screenshot TEXT
     );
@@ -87,6 +89,12 @@ function initSchema(): void {
   }
   if (!productColumns.some((column) => column.name === 'last_screenshot')) {
     db!.exec('ALTER TABLE products ADD COLUMN last_screenshot TEXT')
+  }
+  if (!productColumns.some((column) => column.name === 'throttle')) {
+    db!.exec('ALTER TABLE products ADD COLUMN throttle INTEGER NOT NULL DEFAULT 0')
+  }
+  if (!productColumns.some((column) => column.name === 'throttle_remaining')) {
+    db!.exec('ALTER TABLE products ADD COLUMN throttle_remaining INTEGER NOT NULL DEFAULT 0')
   }
 
   const historyColumns = db!.pragma('table_info(price_history)') as Array<{ name: string; notnull: number }>
