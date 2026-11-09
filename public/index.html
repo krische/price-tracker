@@ -49,6 +49,7 @@
     }
     .add-form input:focus, .login-form input:focus { border-color: #3b82f6; }
     .add-form input.threshold { max-width: 120px; }
+    .add-form input.throttle { max-width: 150px; }
     .login-card { max-width: 420px; margin: 64px auto; }
     .login-form { display: flex; flex-direction: column; gap: 12px; }
     .login-form input { width: 100%; }
@@ -175,11 +176,12 @@
       <div class="add-form">
         <input type="url" id="urlInput" placeholder="Amazon, Best Buy, GameStop, Playstation, Sam's Club, or Target product URL..." />
         <input type="number" id="thresholdInput" class="threshold" placeholder="Alert %" value="5" min="1" max="100" />
+        <input type="number" id="throttleInput" class="throttle" placeholder="Throttle" title="Number of scheduled triggers to skip between checks" aria-label="Scheduled trigger throttle" value="0" min="0" step="1" />
         <button class="btn-primary" id="addBtn" onclick="addProduct()">Track Price</button>
       </div>
       <div id="error"></div>
       <p style="margin-top:8px;font-size:0.75rem;color:#94a3b8;">
-        % = price drop threshold to receive an email alert (default 5%)
+        % = price drop threshold to receive an email alert (default 5%); throttle = scheduled triggers to skip between checks (0 = every trigger, 1 = every other, 2 = every third)
       </p>
     </div>
 
@@ -337,6 +339,7 @@
             <div class="price-meta">
               Last checked: ${lastChecked} &nbsp;•&nbsp;
               Alert at ${p.alert_threshold}% drop or in stock &nbsp;•&nbsp;
+              Throttle: ${p.throttle} scheduled trigger${p.throttle !== 1 ? 's' : ''} skipped between checks &nbsp;•&nbsp;
               ${p.price_check_count} price data point${p.price_check_count !== 1 ? 's' : ''}
               ${p.scrape_error_count ? ` &nbsp;•&nbsp; ${p.scrape_error_count} scrape error${p.scrape_error_count !== 1 ? 's' : ''}` : ''}
             </div>
@@ -366,6 +369,7 @@
     async function addProduct() {
       const url = document.getElementById('urlInput').value.trim()
       const threshold = document.getElementById('thresholdInput').value || 5
+      const throttle = document.getElementById('throttleInput').value || 0
       const btn = document.getElementById('addBtn')
       const err = document.getElementById('error')
 
@@ -382,7 +386,7 @@
         const res = await apiFetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, alertThreshold: parseFloat(threshold) }),
+          body: JSON.stringify({ url, alertThreshold: parseFloat(threshold), throttle: Number(throttle) }),
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
