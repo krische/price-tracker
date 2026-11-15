@@ -1,5 +1,5 @@
 # Stage 1: Build dependencies (compiles native addons like better-sqlite3)
-FROM node:26.13.0-trixie AS builder
+FROM node:26.13.1-trixie AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -18,7 +18,7 @@ RUN npm run build \
 	&& npm prune --omit=dev
 
 # Stage 2: Final runtime image
-FROM node:26.13.0-trixie
+FROM node:26.13.1-trixie
 
 ARG DEBIAN_FRONTEND=noninteractive
 
